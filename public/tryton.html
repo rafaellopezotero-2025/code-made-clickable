@@ -665,10 +665,10 @@
                 { id: 'PL-003', name: 'Cliente VIP (-20%)', discount: 20, description: 'Tarifa preferencial para cuentas corporativas clave.' }
             ],
             products: [
-                { id: 'PROD-01', name: 'Servidor Rack 1U Intel Xeon', basePrice: 1200000, cost: 850000, stock: 12, reorderPoint: 5 },
-                { id: 'PROD-02', name: 'Switch Gestionable 24 Puertos', basePrice: 350000, cost: 220000, stock: 6, reorderPoint: 5 },
-                { id: 'PROD-03', name: 'Licencia Software Tryton ERP Enterprise', basePrice: 250000, cost: 90000, stock: 40, reorderPoint: 10 },
-                { id: 'PROD-04', name: 'Módulo UPS 3000VA Online', basePrice: 480000, cost: 310000, stock: 2, reorderPoint: 4 }
+                { id: 'PROD-01', name: 'Servidor Rack 1U Intel Xeon', description: 'Servidor 1U con procesador Intel Xeon, 32GB RAM y discos en RAID 1.', basePrice: 1200000, cost: 850000, stock: 12, reorderPoint: 5 },
+                { id: 'PROD-02', name: 'Switch Gestionable 24 Puertos', description: 'Switch administrable de 24 puertos Gigabit con VLANs y PoE.', basePrice: 350000, cost: 220000, stock: 6, reorderPoint: 5 },
+                { id: 'PROD-03', name: 'Licencia Software Tryton ERP Enterprise', description: 'Licencia anual de Tryton ERP edición Enterprise, por usuario.', basePrice: 250000, cost: 90000, stock: 40, reorderPoint: 10 },
+                { id: 'PROD-04', name: 'Módulo UPS 3000VA Online', description: 'UPS online 3000VA doble conversión con baterías internas.', basePrice: 480000, cost: 310000, stock: 2, reorderPoint: 4 }
             ],
             sales: [
                 {
@@ -1026,6 +1026,22 @@ xml:
             renderPriceLists();
         }
 
+        function getProductDescription(productId) {
+            const prod = appState.products.find(p => p.id === productId);
+            return (prod && prod.description) ? prod.description : 'Sin descripción';
+        }
+
+        function toggleOrderDetail(table, id) {
+            const row = document.getElementById(`detail-${table}-${id}`);
+            if (!row) return;
+            const hidden = row.classList.toggle('hidden');
+            const icon = document.querySelector(`#toggle-${table}-${id} i`);
+            if (icon) {
+                icon.classList.toggle('fa-chevron-down', hidden);
+                icon.classList.toggle('fa-chevron-up', !hidden);
+            }
+        }
+
         // 4. SALES (VENTAS) LOGIC
         function renderSales() {
             const search = document.getElementById('search-sales')?.value.toLowerCase() || '';
@@ -1044,7 +1060,7 @@ xml:
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50 transition';
                 tr.innerHTML = `
-                    <td class="p-3.5 font-mono text-xs font-semibold text-blue-600">${s.id}</td>
+                    <td class="p-3.5 font-mono text-xs font-semibold text-blue-600 whitespace-nowrap"><button id="toggle-sales-${s.id}" onclick="toggleOrderDetail('sales', '${s.id}')" class="mr-1 text-slate-400 hover:text-slate-700" title="Ver productos"><i class="fa-solid fa-chevron-down text-[10px]"></i></button>${s.id}</td>
                     <td class="p-3.5 font-medium text-slate-800">${s.partyName}</td>
                     <td class="p-3.5 text-xs text-slate-500">${s.date}</td>
                     <td class="p-3.5 text-xs text-slate-600">${s.priceListName}</td>
@@ -1059,6 +1075,26 @@ xml:
                     </td>
                 `;
                 container.appendChild(tr);
+
+                const itemsHtml = s.items.map(it => `
+                    <div class="flex items-start space-x-3 py-1.5 border-b border-slate-200 last:border-b-0">
+                        <span class="w-8 flex-shrink-0 text-xs font-mono text-slate-500">${it.qty}u</span>
+                        <span class="w-64 flex-shrink-0 text-xs font-medium text-slate-700">${it.productName}</span>
+                        <span class="text-xs text-slate-500">${getProductDescription(it.productId)}</span>
+                    </div>`).join('');
+
+                const detailTr = document.createElement('tr');
+                detailTr.id = `detail-sales-${s.id}`;
+                detailTr.className = 'hidden';
+                detailTr.innerHTML = `
+                    <td colspan="9" class="bg-slate-50 border-b border-slate-100 p-0">
+                        <div class="px-16 py-3">
+                            <p class="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Productos y descripciones</p>
+                            ${itemsHtml}
+                        </div>
+                    </td>
+                `;
+                container.appendChild(detailTr);
             });
         }
 
@@ -1104,17 +1140,25 @@ xml:
 
             tempSaleLines.forEach((line, idx) => {
                 const div = document.createElement('div');
-                div.className = 'flex items-center space-x-3 bg-white p-2 rounded border border-slate-200';
+                div.className = 'bg-white p-2 rounded border border-slate-200';
                 div.innerHTML = `
-                    <select onchange="tempSaleLines[${idx}].productId = this.value; calculateSaleTotals();" class="flex-1 border border-slate-300 rounded px-2 py-1 text-xs">
-                        ${appState.products.map(p => `<option value="${p.id}" ${p.id === line.productId ? 'selected' : ''}>${p.name} ($${p.basePrice.toLocaleString()})</option>`).join('')}
-                    </select>
-                    <input type="number" min="1" value="${line.qty}" onchange="tempSaleLines[${idx}].qty = parseInt(this.value) || 1; calculateSaleTotals();" class="w-16 border border-slate-300 rounded px-2 py-1 text-xs text-center">
-                    <button type="button" onclick="removeSaleLineItem(${idx})" class="text-red-500 hover:text-red-700 px-2"><i class="fa-solid fa-trash"></i></button>
+                    <div class="flex items-center space-x-3">
+                        <select onchange="tempSaleLines[${idx}].productId = this.value; calculateSaleTotals(); updateSaleLineDesc(${idx});" class="flex-1 border border-slate-300 rounded px-2 py-1 text-xs">
+                            ${appState.products.map(p => `<option value="${p.id}" ${p.id === line.productId ? 'selected' : ''}>${p.name} ($${p.basePrice.toLocaleString()})</option>`).join('')}
+                        </select>
+                        <input type="number" min="1" value="${line.qty}" onchange="tempSaleLines[${idx}].qty = parseInt(this.value) || 1; calculateSaleTotals();" class="w-16 border border-slate-300 rounded px-2 py-1 text-xs text-center">
+                        <button type="button" onclick="removeSaleLineItem(${idx})" class="text-red-500 hover:text-red-700 px-2"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <div id="sale-line-desc-${idx}" class="mt-1 pl-1 text-[11px] italic text-slate-500">${getProductDescription(line.productId)}</div>
                 `;
                 container.appendChild(div);
             });
             calculateSaleTotals();
+        }
+
+        function updateSaleLineDesc(idx) {
+            const el = document.getElementById(`sale-line-desc-${idx}`);
+            if (el) el.textContent = getProductDescription(tempSaleLines[idx].productId);
         }
 
         function calculateSaleTotals() {
@@ -1194,7 +1238,7 @@ xml:
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50 transition';
                 tr.innerHTML = `
-                    <td class="p-3.5 font-mono text-xs font-semibold text-amber-600">${p.id}</td>
+                    <td class="p-3.5 font-mono text-xs font-semibold text-amber-600 whitespace-nowrap"><button id="toggle-purchases-${p.id}" onclick="toggleOrderDetail('purchases', '${p.id}')" class="mr-1 text-slate-400 hover:text-slate-700" title="Ver productos"><i class="fa-solid fa-chevron-down text-[10px]"></i></button>${p.id}</td>
                     <td class="p-3.5 font-medium text-slate-800">${p.partyName}</td>
                     <td class="p-3.5 text-xs text-slate-500">${p.date}</td>
                     <td class="p-3.5 text-right">$${p.subtotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
@@ -1208,6 +1252,26 @@ xml:
                     </td>
                 `;
                 container.appendChild(tr);
+
+                const itemsHtml = p.items.map(it => `
+                    <div class="flex items-start space-x-3 py-1.5 border-b border-slate-200 last:border-b-0">
+                        <span class="w-8 flex-shrink-0 text-xs font-mono text-slate-500">${it.qty}u</span>
+                        <span class="w-64 flex-shrink-0 text-xs font-medium text-slate-700">${it.productName}</span>
+                        <span class="text-xs text-slate-500">${getProductDescription(it.productId)}</span>
+                    </div>`).join('');
+
+                const detailTr = document.createElement('tr');
+                detailTr.id = `detail-purchases-${p.id}`;
+                detailTr.className = 'hidden';
+                detailTr.innerHTML = `
+                    <td colspan="8" class="bg-slate-50 border-b border-slate-100 p-0">
+                        <div class="px-16 py-3">
+                            <p class="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Productos y descripciones</p>
+                            ${itemsHtml}
+                        </div>
+                    </td>
+                `;
+                container.appendChild(detailTr);
             });
         }
 
@@ -1250,17 +1314,25 @@ xml:
 
             tempPurchaseLines.forEach((line, idx) => {
                 const div = document.createElement('div');
-                div.className = 'flex items-center space-x-3 bg-white p-2 rounded border border-slate-200';
+                div.className = 'bg-white p-2 rounded border border-slate-200';
                 div.innerHTML = `
-                    <select onchange="tempPurchaseLines[${idx}].productId = this.value; calculatePurchaseTotals();" class="flex-1 border border-slate-300 rounded px-2 py-1 text-xs">
-                        ${appState.products.map(p => `<option value="${p.id}" ${p.id === line.productId ? 'selected' : ''}>${p.name} ($${p.basePrice.toLocaleString()})</option>`).join('')}
-                    </select>
-                    <input type="number" min="1" value="${line.qty}" onchange="tempPurchaseLines[${idx}].qty = parseInt(this.value) || 1; calculatePurchaseTotals();" class="w-16 border border-slate-300 rounded px-2 py-1 text-xs text-center">
-                    <button type="button" onclick="removePurchaseLineItem(${idx})" class="text-red-500 hover:text-red-700 px-2"><i class="fa-solid fa-trash"></i></button>
+                    <div class="flex items-center space-x-3">
+                        <select onchange="tempPurchaseLines[${idx}].productId = this.value; calculatePurchaseTotals(); updatePurchaseLineDesc(${idx});" class="flex-1 border border-slate-300 rounded px-2 py-1 text-xs">
+                            ${appState.products.map(p => `<option value="${p.id}" ${p.id === line.productId ? 'selected' : ''}>${p.name} ($${p.basePrice.toLocaleString()})</option>`).join('')}
+                        </select>
+                        <input type="number" min="1" value="${line.qty}" onchange="tempPurchaseLines[${idx}].qty = parseInt(this.value) || 1; calculatePurchaseTotals();" class="w-16 border border-slate-300 rounded px-2 py-1 text-xs text-center">
+                        <button type="button" onclick="removePurchaseLineItem(${idx})" class="text-red-500 hover:text-red-700 px-2"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <div id="purchase-line-desc-${idx}" class="mt-1 pl-1 text-[11px] italic text-slate-500">${getProductDescription(line.productId)}</div>
                 `;
                 container.appendChild(div);
             });
             calculatePurchaseTotals();
+        }
+
+        function updatePurchaseLineDesc(idx) {
+            const el = document.getElementById(`purchase-line-desc-${idx}`);
+            if (el) el.textContent = getProductDescription(tempPurchaseLines[idx].productId);
         }
 
         function calculatePurchaseTotals() {
