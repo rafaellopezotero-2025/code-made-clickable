@@ -1375,6 +1375,8 @@ xml:
             appState.products.push({
                 id: `PROD-${String(n).padStart(2, '0')}`,
                 name: document.getElementById('product-name').value,
+                type: document.getElementById('product-type').value,
+                description: document.getElementById('product-desc').value.trim(),
                 cost: parseFloat(document.getElementById('product-cost').value),
                 basePrice: parseFloat(document.getElementById('product-price').value),
                 stock: parseInt(document.getElementById('product-stock').value, 10),
