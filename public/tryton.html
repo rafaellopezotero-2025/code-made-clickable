@@ -1057,6 +1057,7 @@ xml:
             const sale = appState.sales.find(s => s.id === saleId);
             if(sale) {
                 sale.state = newState;
+                if (newState === 'confirmed' && !sale.stockApplied) { sale.stockApplied = true; applyStockMovement(sale.items, -1); }
                 renderSales();
                 renderDashboard();
             }
@@ -1205,6 +1206,7 @@ xml:
             const purchase = appState.purchases.find(p => p.id === purchaseId);
             if(purchase) {
                 purchase.state = newState;
+                if (newState === 'confirmed' && !purchase.stockApplied) { purchase.stockApplied = true; applyStockMovement(purchase.items, 1); }
                 renderPurchases();
                 renderDashboard();
             }
