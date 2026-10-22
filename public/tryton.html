@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tryton ERP - Ventas y Compras</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        tryton: {
+                            50: '#f0f4f8',
+                            100: '#d9e2ec',
+                            200: '#bccadc',
+                            500: '#334e68',
+                            600: '#243b53',
+                            700: '#102a43',
+                            800: '#0b1d3a',
+                            accent: '#2b6cb0',
+                            orange: '#d97706',
+                            green: '#059669'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .code-font { font-family: 'JetBrains Mono', monospace; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 flex h-screen overflow-hidden">
+
+    <!-- SIDEBAR / TRYTON MODULE MENU -->
+    <aside class="w-64 bg-tryton-800 text-slate-200 flex flex-col flex-shrink-0 shadow-lg">
+        <!-- Logo Header -->
+        <div class="p-4 border-b border-tryton-700 flex items-center justify-between bg-tryton-700/50">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded bg-tryton-accent flex items-center justify-center font-bold text-white text-xl shadow">
+                    T
+                </div>
+                <div>
+                    <h1 class="font-bold text-white leading-tight">Tryton ERP</h1>
+                    <span class="text-xs text-slate-400">Ventas & Compras v7.0</span>
+                </div>
+            </div>
+            <span class="inline-block w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse" title="Servidor conectado"></span>
+        </div>
+
+        <!-- Navigation Items -->
+        <nav class="flex-1 overflow-y-auto p-3 space-y-1">
+            <div class="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Módulos Core</div>
+            
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors bg-tryton-accent text-white">
+                <i class="fa-solid fa-chart-pie w-5 text-center"></i>
+                <span>Resumen General</span>
+            </button>
+
+            <button onclick="switchTab('parties')" id="nav-parties" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-tryton-700 hover:text-white transition-colors">
+                <i class="fa-solid fa-users-gear w-5 text-center"></i>
+                <span>Terceros (Parties)</span>
+            </button>
+
+            <button onclick="switchTab('pricelists')" id="nav-pricelists" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-tryton-700 hover:text-white transition-colors">
+                <i class="fa-solid fa-tags w-5 text-center"></i>
+                <span>Listas de Precios</span>
+            </button>
+
+            <button onclick="switchTab('sales')" id="nav-sales" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-tryton-700 hover:text-white transition-colors">
+                <i class="fa-solid fa-file-invoice-dollar w-5 text-center"></i>
+                <span>Ventas (Sale)</span>
+            </button>
+
+            <button onclick="switchTab('purchases')" id="nav-purchases" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-tryton-700 hover:text-white transition-colors">
+                <i class="fa-solid fa-cart-flatbed w-5 text-center"></i>
+                <span>Compras (Purchase)</span>
+            </button>
+
+            <div class="pt-4 px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Desarrollo & Modelo</div>
+            
+            <button onclick="switchTab('inspector')" id="nav-inspector" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-tryton-700 hover:text-white transition-colors">
+                <i class="fa-solid fa-code w-5 text-center text-amber-400"></i>
+                <span class="text-amber-300">Tryton Code Inspector</span>
+            </button>
+        </nav>
+
+        <!-- Company & User Info -->
+        <div class="p-3 bg-tryton-700/40 border-t border-tryton-700 text-xs text-slate-300 flex items-center justify-between">
+            <div>
+                <div class="font-semibold text-white">Empresa Demo SRL</div>
+                <div class="text-slate-400">CUIT: 30-71889912-4</div>
+            </div>
+            <i class="fa-solid fa-building text-slate-400 text-lg"></i>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50">
+        
+        <!-- TOP TOOLBAR / HEADER -->
+        <header class="bg-white border-b border-slate-200 h-14 px-6 flex items-center justify-between flex-shrink-0">
+            <div class="flex items-center space-x-4">
+                <h2 id="page-title" class="text-lg font-bold text-slate-800">Resumen General</h2>
+                <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded border border-slate-200">Entorno de Simulación ERP</span>
+            </div>
+
+            <!-- Global Quick Actions -->
+            <div class="flex items-center space-x-3">
+                <button onclick="openPartyModal()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-300 transition flex items-center space-x-1">
+                    <i class="fa-solid fa-plus text-slate-500"></i>
+                    <span>Nuevo Tercero</span>
+                </button>
+                <button onclick="openSaleModal()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded font-medium shadow-sm transition flex items-center space-x-1">
+                    <i class="fa-solid fa-cart-plus"></i>
+                    <span>Nueva Venta</span>
+                </button>
+                <button onclick="openPurchaseModal()" class="text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded font-medium shadow-sm transition flex items-center space-x-1">
+                    <i class="fa-solid fa-bag-shopping"></i>
+                    <span>Nueva Compra</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- DYNAMIC CONTENT VIEW CONTAINERS -->
+        <div class="flex-1 overflow-y-auto p-6" id="main-view-container">
+
+            <!-- 1. DASHBOARD TAB -->
+            <div id="tab-dashboard" class="tab-content space-y-6">
+                <!-- KPI CARDS -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-semibold uppercase text-slate-400">Ventas Confirmadas</p>
+                                <h3 id="kpi-sales-total" class="text-2xl font-bold text-slate-800 mt-1">$0.00</h3>
+                                <span class="text-xs text-emerald-600 font-medium inline-flex items-center mt-1">
+                                    <i class="fa-solid fa-arrow-trend-up mr-1"></i> +14.2% este mes
+                                </span>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-lg">
+                                <i class="fa-solid fa-hand-holding-dollar"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-semibold uppercase text-slate-400">Compras Procesadas</p>
+                                <h3 id="kpi-purchases-total" class="text-2xl font-bold text-slate-800 mt-1">$0.00</h3>
+                                <span class="text-xs text-amber-600 font-medium inline-flex items-center mt-1">
+                                    <i class="fa-solid fa-boxes-packing mr-1"></i> Stock Aprovisionado
+                                </span>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-lg">
+                                <i class="fa-solid fa-truck-ramp-box"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-semibold uppercase text-slate-400">Terceros Activos</p>
+                                <h3 id="kpi-parties-count" class="text-2xl font-bold text-slate-800 mt-1">0</h3>
+                                <span class="text-xs text-slate-500 font-medium inline-flex items-center mt-1">
+                                    Clientes y Proveedores
+                                </span>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg">
+                                <i class="fa-solid fa-address-book"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-semibold uppercase text-slate-400">Margen Bruto Prom.</p>
+                                <h3 id="kpi-margin-total" class="text-2xl font-bold text-emerald-600 mt-1">32.8%</h3>
+                                <span class="text-xs text-emerald-600 font-medium inline-flex items-center mt-1">
+                                    <i class="fa-solid fa-circle-check mr-1"></i> Óptimo comercial
+                                </span>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHARTS ROW -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-slate-800">Evolución Comparativa: Ventas vs Compras</h3>
+                            <span class="text-xs text-slate-400">Valores expresados en ARS</span>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="salesVsPurchaseChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 class="font-bold text-slate-800 mb-4">Distribución de Terceros</h3>
+                        <div class="h-64 flex items-center justify-center">
+                            <canvas id="partyDistributionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RECENT TRANSACTIONS TABLE -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                    <h3 class="font-bold text-slate-800 mb-4">Últimos Presupuestos y Órdenes</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-slate-500 uppercase text-xs border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3">Código</th>
+                                    <th class="p-3">Tipo</th>
+                                    <th class="p-3">Tercero</th>
+                                    <th class="p-3">Estado</th>
+                                    <th class="p-3 text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-recent-table" class="divide-y divide-slate-100">
+                                <!-- Dynamic JS Population -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. TERCEROS (PARTIES) TAB -->
+            <div id="tab-parties" class="tab-content hidden space-y-4">
+                <div class="flex justify-between items-center bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                    <div class="flex items-center space-x-3">
+                        <input type="text" id="search-party" oninput="renderParties()" placeholder="Buscar por Nombre, CUIT o Email..." class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm w-72 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select id="filter-party-role" onchange="renderParties()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="ALL">Todos los Roles</option>
+                            <option value="CLIENTE">Clientes</option>
+                            <option value="PROVEEDOR">Proveedores</option>
+                            <option value="AMBOS">Ambos</option>
+                        </select>
+                    </div>
+                    <button onclick="openPartyModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg font-medium shadow-sm transition flex items-center space-x-2">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>Crear Tercero (Party)</span>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-100 text-slate-600 font-semibold uppercase text-xs border-b border-slate-200">
+                            <tr>
+                                <th class="p-3.5">Código / ID</th>
+                                <th class="p-3.5">Nombre / Razón Social</th>
+                                <th class="p-3.5">CUIT / TAX ID</th>
+                                <th class="p-3.5">Rol Comercial</th>
+                                <th class="p-3.5">Email</th>
+                                <th class="p-3.5">Teléfono</th>
+                                <th class="p-3.5 text-center">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="parties-table-body" class="divide-y divide-slate-100">
+                            <!-- Rendered via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 3. LISTAS DE PRECIOS TAB -->
+            <div id="tab-pricelists" class="tab-content hidden space-y-4">
+                <div class="flex justify-between items-center bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                    <div>
+                        <h3 class="font-bold text-slate-800">Listas de Precios & Reglas de Descuento</h3>
+                        <p class="text-xs text-slate-500">Gestión de estructuras tarifarias aplicables a clientes y proveedores en Tryton (`product.price_list`)</p>
+                    </div>
+                    <button onclick="openPriceListModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg font-medium shadow-sm transition flex items-center space-x-2">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Nueva Lista de Precios</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5" id="pricelists-cards-container">
+                    <!-- Rendered via JavaScript -->
+                </div>
+            </div>
+
+            <!-- 4. VENTAS (SALE) TAB -->
+            <div id="tab-sales" class="tab-content hidden space-y-4">
+                <div class="flex justify-between items-center bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                    <div class="flex items-center space-x-3">
+                        <input type="text" id="search-sales" oninput="renderSales()" placeholder="Buscar por código de venta o cliente..." class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm w-72 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select id="filter-sales-state" onchange="renderSales()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="ALL">Todos los Estados</option>
+                            <option value="draft">Borrador</option>
+                            <option value="confirmed">Confirmado</option>
+                            <option value="processing">Procesado</option>
+                            <option value="cancelled">Cancelado</option>
+                        </select>
+                    </div>
+                    <button onclick="openSaleModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg font-medium shadow-sm transition flex items-center space-x-2">
+                        <i class="fa-solid fa-file-circle-plus"></i>
+                        <span>Crear Presupuesto de Venta</span>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-100 text-slate-600 font-semibold uppercase text-xs border-b border-slate-200">
+                            <tr>
+                                <th class="p-3.5">Código</th>
+                                <th class="p-3.5">Cliente</th>
+                                <th class="p-3.5">Fecha</th>
+                                <th class="p-3.5">Lista de Precios</th>
+                                <th class="p-3.5 text-right">Subtotal</th>
+                                <th class="p-3.5 text-right">Impuestos (IVA)</th>
+                                <th class="p-3.5 text-right">Total</th>
+                                <th class="p-3.5 text-center">Estado</th>
+                                <th class="p-3.5 text-center">Acciones State Machine</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sales-table-body" class="divide-y divide-slate-100">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 5. COMPRAS (PURCHASE) TAB -->
+            <div id="tab-purchases" class="tab-content hidden space-y-4">
+                <div class="flex justify-between items-center bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                    <div class="flex items-center space-x-3">
+                        <input type="text" id="search-purchases" oninput="renderPurchases()" placeholder="Buscar por código o proveedor..." class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm w-72 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <select id="filter-purchases-state" onchange="renderPurchases()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="ALL">Todos los Estados</option>
+                            <option value="draft">Borrador</option>
+                            <option value="confirmed">Confirmado</option>
+                            <option value="processing">Procesado</option>
+                            <option value="cancelled">Cancelado</option>
+                        </select>
+                    </div>
+                    <button onclick="openPurchaseModal()" class="bg-amber-600 hover:bg-amber-700 text-white text-sm px-4 py-2 rounded-lg font-medium shadow-sm transition flex items-center space-x-2">
+                        <i class="fa-solid fa-cart-arrow-down"></i>
+                        <span>Crear Orden de Compra</span>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-100 text-slate-600 font-semibold uppercase text-xs border-b border-slate-200">
+                            <tr>
+                                <th class="p-3.5">Código</th>
+                                <th class="p-3.5">Proveedor</th>
+                                <th class="p-3.5">Fecha</th>
+                                <th class="p-3.5 text-right">Subtotal</th>
+                                <th class="p-3.5 text-right">Impuestos (21%)</th>
+                                <th class="p-3.5 text-right">Total</th>
+                                <th class="p-3.5 text-center">Estado</th>
+                                <th class="p-3.5 text-center">Acciones State Machine</th>
+                            </tr>
+                        </thead>
+                        <tbody id="purchases-table-body" class="divide-y divide-slate-100">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 6. TRYTON CODE INSPECTOR TAB -->
+            <div id="tab-inspector" class="tab-content hidden space-y-6">
+                <div class="bg-slate-900 text-slate-100 p-6 rounded-xl shadow-md border border-slate-800">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-amber-400 flex items-center gap-2">
+                                <i class="fa-solid fa-code text-amber-400"></i>
+                                Tryton Developer Code Inspector
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-1">Estructura real del modelo en Python (Tryton ORM) y definiciones XML Views.</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="showCodeTab('sale')" id="code-btn-sale" class="code-tab-btn px-3 py-1.5 text-xs font-mono rounded bg-amber-500 text-slate-950 font-bold">sale.py</button>
+                            <button onclick="showCodeTab('purchase')" id="code-btn-purchase" class="code-tab-btn px-3 py-1.5 text-xs font-mono rounded bg-slate-800 text-slate-300 hover:bg-slate-700">purchase.py</button>
+                            <button onclick="showCodeTab('party')" id="code-btn-party" class="code-tab-btn px-3 py-1.5 text-xs font-mono rounded bg-slate-800 text-slate-300 hover:bg-slate-700">party.py</button>
+                            <button onclick="showCodeTab('cfg')" id="code-btn-cfg" class="code-tab-btn px-3 py-1.5 text-xs font-mono rounded bg-slate-800 text-slate-300 hover:bg-slate-700">tryton.cfg</button>
+                        </div>
+                    </div>
+
+                    <!-- CODE PREVIEW DISPLAY -->
+                    <div class="relative bg-slate-950 rounded-lg p-4 font-mono text-xs overflow-x-auto text-emerald-400 border border-slate-800 shadow-inner max-h-[500px]">
+                        <pre id="code-block" class="code-font leading-relaxed"></pre>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- MODAL: CREAR/EDITAR TERCERO (PARTY) -->
+    <div id="party-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
+            <div class="bg-slate-800 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-blue-400"></i>
+                    Nuevo Tercero (Party)
+                </h3>
+                <button onclick="closePartyModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="party-form" onsubmit="saveParty(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nombre / Razón Social *</label>
+                    <input type="text" id="party-name" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">CUIT / TAX ID *</label>
+                        <input type="text" id="party-cuit" required placeholder="30-XXXXXXXX-X" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Rol Comercial *</label>
+                        <select id="party-role" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="CLIENTE">Cliente</option>
+                            <option value="PROVEEDOR">Proveedor</option>
+                            <option value="AMBOS">Ambos (Cliente / Proveedor)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Email</label>
+                        <input type="email" id="party-email" placeholder="contacto@empresa.com" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Teléfono</label>
+                        <input type="text" id="party-phone" placeholder="+54 343 400000" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div class="pt-4 flex justify-end space-x-3 border-t border-slate-100">
+                    <button type="button" onclick="closePartyModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm">Guardar Party</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CREAR/EDITAR VENTA (SALE) -->
+    <div id="sale-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-200">
+            <div class="bg-blue-900 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-file-invoice-dollar text-blue-300"></i>
+                    Nuevo Presupuesto de Venta (`sale.sale`)
+                </h3>
+                <button onclick="closeSaleModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="sale-form" onsubmit="saveSale(event)" class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Cliente *</label>
+                        <select id="sale-party" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <!-- Populated via JS -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Lista de Precios *</label>
+                        <select id="sale-pricelist" required onchange="calculateSaleTotals()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <!-- Populated via JS -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- ITEMS TABLE IN MODAL -->
+                <div class="border border-slate-200 rounded-lg overflow-hidden">
+                    <div class="bg-slate-50 px-4 py-2 font-semibold text-xs text-slate-600 border-b border-slate-200 flex justify-between items-center">
+                        <span>LÍNEAS DE VENTA</span>
+                        <button type="button" onclick="addSaleLineItem()" class="text-blue-600 hover:text-blue-800 text-xs font-bold">+ Agregar Producto</button>
+                    </div>
+                    <div class="p-3 space-y-2 max-h-48 overflow-y-auto" id="sale-lines-container">
+                        <!-- Dynamic Line Rows -->
+                    </div>
+                </div>
+
+                <!-- TOTALS DISPLAY -->
+                <div class="bg-slate-50 p-4 rounded-lg flex justify-between items-center text-sm border border-slate-200">
+                    <span class="text-slate-500 text-xs">Impuesto predeterminado: IVA 21%</span>
+                    <div class="text-right space-y-1">
+                        <div><span class="text-slate-500 mr-2">Subtotal:</span> <strong id="sale-subtotal-display">$0.00</strong></div>
+                        <div><span class="text-slate-500 mr-2">IVA (21%):</span> <strong id="sale-tax-display">$0.00</strong></div>
+                        <div class="text-base text-blue-700 font-bold"><span class="mr-2">Total Venta:</span> <span id="sale-total-display">$0.00</span></div>
+                    </div>
+                </div>
+
+                <div class="pt-4 flex justify-end space-x-3 border-t border-slate-100">
+                    <button type="button" onclick="closeSaleModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm">Guardar en Borrador</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CREAR COMPRA (PURCHASE) -->
+    <div id="purchase-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-200">
+            <div class="bg-amber-800 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-cart-flatbed text-amber-300"></i>
+                    Nueva Órden de Compra (`purchase.purchase`)
+                </h3>
+                <button onclick="closePurchaseModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="purchase-form" onsubmit="savePurchase(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Proveedor *</label>
+                    <select id="purchase-party" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
+
+                <!-- ITEMS TABLE IN MODAL -->
+                <div class="border border-slate-200 rounded-lg overflow-hidden">
+                    <div class="bg-slate-50 px-4 py-2 font-semibold text-xs text-slate-600 border-b border-slate-200 flex justify-between items-center">
+                        <span>LÍNEAS DE COMPRA / APROVISIONAMIENTO</span>
+                        <button type="button" onclick="addPurchaseLineItem()" class="text-amber-700 hover:text-amber-900 text-xs font-bold">+ Agregar Artículo</button>
+                    </div>
+                    <div class="p-3 space-y-2 max-h-48 overflow-y-auto" id="purchase-lines-container">
+                        <!-- Dynamic Line Rows -->
+                    </div>
+                </div>
+
+                <!-- TOTALS DISPLAY -->
+                <div class="bg-slate-50 p-4 rounded-lg flex justify-between items-center text-sm border border-slate-200">
+                    <span class="text-slate-500 text-xs">Aprovisionamiento con Almacén Central</span>
+                    <div class="text-right space-y-1">
+                        <div><span class="text-slate-500 mr-2">Subtotal:</span> <strong id="purchase-subtotal-display">$0.00</strong></div>
+                        <div><span class="text-slate-500 mr-2">IVA (21%):</span> <strong id="purchase-tax-display">$0.00</strong></div>
+                        <div class="text-base text-amber-700 font-bold"><span class="mr-2">Total Compra:</span> <span id="purchase-total-display">$0.00</span></div>
+                    </div>
+                </div>
+
+                <div class="pt-4 flex justify-end space-x-3 border-t border-slate-100">
+                    <button type="button" onclick="closePurchaseModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-sm bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium shadow-sm">Generar Orden Compra</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: LISTA DE PRECIOS -->
+    <div id="pricelist-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+            <div class="bg-slate-800 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-tags text-emerald-400"></i>
+                    Nueva Lista de Precios
+                </h3>
+                <button onclick="closePriceListModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="pricelist-form" onsubmit="savePriceList(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nombre de la Lista *</label>
+                    <input type="text" id="pricelist-name" required placeholder="Ej. Mayorista Platino" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Factor de Descuento (%)</label>
+                    <input type="number" id="pricelist-discount" min="-100" max="100" value="0" step="0.5" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <span class="text-xs text-slate-400">Un valor positivo como 15 aplica un 15% de descuento sobre precio base.</span>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Descripción / Regla Tryton</label>
+                    <textarea id="pricelist-desc" rows="2" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Descripción de aplicación comercial"></textarea>
+                </div>
+                <div class="pt-4 flex justify-end space-x-3 border-t border-slate-100">
+                    <button type="button" onclick="closePriceListModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm">Guardar Lista</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APPLICATION LOGIC -->
+    <script>
+        // DEMO INITIAL DATA STORE
+        let appState = {
+            parties: [
+                { id: 'PARTY-001', name: 'Distribuidora Paraná SRL', cuit: '30-71122334-8', role: 'PROVEEDOR', email: 'ventas@distparana.com.ar', phone: '+54 343 4221100', active: true },
+                { id: 'PARTY-002', name: 'Tech Solutions Argentina', cuit: '30-88990011-2', role: 'CLIENTE', email: 'compras@techsolutions.com', phone: '+54 11 50329900', active: true },
+                { id: 'PARTY-003', name: 'Suministros Industriales SA', cuit: '33-54321098-9', role: 'AMBOS', email: 'contacto@sumindustriales.com', phone: '+54 341 4801122', active: true },
+                { id: 'PARTY-004', name: 'Comercial Santa Fe Norte', cuit: '20-29887766-4', role: 'CLIENTE', email: 'info@santafenorte.com', phone: '+54 342 4556677', active: true }
+            ],
+            priceLists: [
+                { id: 'PL-001', name: 'Precio Base / Minorista', discount: 0, description: 'Precio de lista público sin bonificaciones.' },
+                { id: 'PL-002', name: 'Mayorista (-15%)', discount: 15, description: 'Descuento para distribuidores y compras en volumen.' },
+                { id: 'PL-003', name: 'Cliente VIP (-20%)', discount: 20, description: 'Tarifa preferencial para cuentas corporativas clave.' }
+            ],
+            products: [
+                { id: 'PROD-01', name: 'Servidor Rack 1U Intel Xeon', basePrice: 1200000 },
+                { id: 'PROD-02', name: 'Switch Gestionable 24 Puertos', basePrice: 350000 },
+                { id: 'PROD-03', name: 'Licencia Software Tryton ERP Enterprise', basePrice: 250000 },
+                { id: 'PROD-04', name: 'Módulo UPS 3000VA Online', basePrice: 480000 }
+            ],
+            sales: [
+                {
+                    id: 'SO-2026-001',
+                    partyId: 'PARTY-002',
+                    partyName: 'Tech Solutions Argentina',
+                    date: '2026-10-18',
+                    priceListId: 'PL-002',
+                    priceListName: 'Mayorista (-15%)',
+                    subtotal: 1317500,
+                    tax: 276675,
+                    total: 1594175,
+                    state: 'processing', // draft, confirmed, processing, cancelled
+                    items: [
+                        { productId: 'PROD-01', productName: 'Servidor Rack 1U Intel Xeon', qty: 1, unitPrice: 1020000, lineTotal: 1020000 },
+                        { productId: 'PROD-02', productName: 'Switch Gestionable 24 Puertos', qty: 1, unitPrice: 297500, lineTotal: 297500 }
+                    ]
+                },
+                {
+                    id: 'SO-2026-002',
+                    partyId: 'PARTY-004',
+                    partyName: 'Comercial Santa Fe Norte',
+                    date: '2026-10-21',
+                    priceListId: 'PL-001',
+                    priceListName: 'Precio Base / Minorista',
+                    subtotal: 500000,
+                    tax: 105000,
+                    total: 605000,
+                    state: 'confirmed',
+                    items: [
+                        { productId: 'PROD-03', productName: 'Licencia Software Tryton ERP Enterprise', qty: 2, unitPrice: 250000, lineTotal: 500000 }
+                    ]
+                }
+            ],
+            purchases: [
+                {
+                    id: 'PO-2026-001',
+                    partyId: 'PARTY-001',
+                    partyName: 'Distribuidora Paraná SRL',
+                    date: '2026-10-15',
+                    subtotal: 960000,
+                    tax: 201600,
+                    total: 1161600,
+                    state: 'processing',
+                    items: [
+                        { productId: 'PROD-04', productName: 'Módulo UPS 3000VA Online', qty: 2, unitPrice: 480000, lineTotal: 960000 }
+                    ]
+                }
+            ]
+        };
+
+        // CODE SNIPPETS FOR TRYTON DEVELOPER INSPECTOR
+        const codeSnippets = {
+            sale: `# tryton_module/sale.py
+from trytond.model import ModelSQL, ModelView, fields
+from trytond.pool import Pool
+from trytond.pstatement import State
+
+class Sale(ModelSQL, ModelView):
+    'Venta / Presupuesto (Sale Management)'
+    __name__ = 'sale.sale'
+
+    party = fields.Many2One('party.party', 'Cliente', required=True,
+        domain=[('is_client', '=', True)])
+    price_list = fields.Many2One('product.price_list', 'Lista de Precios')
+    lines = fields.One2Many('sale.line', 'sale', 'Líneas de Venta')
+    
+    subtotal = fields.Function(fields.Numeric('Subtotal'), 'get_totals')
+    tax_amount = fields.Function(fields.Numeric('Impuestos IVA 21%'), 'get_totals')
+    total_amount = fields.Function(fields.Numeric('Total Venta'), 'get_totals')
+
+    state = fields.Selection([
+        ('draft', 'Borrador'),
+        ('confirmed', 'Confirmado'),
+        ('processing', 'En Proceso'),
+        ('done', 'Realizado'),
+        ('cancelled', 'Cancelado')
+    ], 'Estado', required=True, readonly=True)
+
+    @classmethod
+    def __setup__(cls):
+        super().__setup__()
+        cls._transitions |= {
+            ('draft', 'confirmed'),
+            ('confirmed', 'processing'),
+            ('processing', 'done'),
+            ('draft', 'cancelled'),
+        }
+
+    @classmethod
+    @ModelView.button
+    def confirm(cls, sales):
+        for sale in sales:
+            sale.state = 'confirmed'
+            sale.save()`,
+
+            purchase: `# tryton_module/purchase.py
+from trytond.model import ModelSQL, ModelView, fields
+
+class Purchase(ModelSQL, ModelView):
+    'Orden de Compra (Purchase Management)'
+    __name__ = 'purchase.purchase'
+
+    party = fields.Many2One('party.party', 'Proveedor', required=True)
+    invoice_address = fields.Many2One('party.address', 'Dirección Facturación')
+    lines = fields.One2Many('purchase.line', 'purchase', 'Líneas de Compra')
+    
+    total_amount = fields.Numeric('Total Compra', digits=(16, 2))
+    state = fields.Selection([
+        ('draft', 'Borrador'),
+        ('confirmed', 'Confirmado'),
+        ('processing', 'En Proceso'),
+        ('cancelled', 'Cancelado')
+    ], 'Estado', required=True)`,
+
+            party: `# tryton_module/party.py
+from trytond.model import ModelSQL, ModelView, fields
+
+class Party(ModelSQL, ModelView):
+    'Tercero / Partner'
+    __name__ = 'party.party'
+
+    name = fields.Char('Nombre / Razón Social', required=True)
+    code = fields.Char('Código Interno')
+    vat_number = fields.Char('CUIT / TAX ID')
+    is_client = fields.Boolean('Es Cliente')
+    is_supplier = fields.Boolean('Es Proveedor')
+    email = fields.Char('Correo Electrónico')
+    phone = fields.Char('Teléfono')`,
+
+            cfg: `# tryton.cfg
+[tryton]
+version=7.0.0
+depends:
+    ir
+    res
+    party
+    product
+    account
+xml:
+    sale.xml
+    purchase.xml
+    party.xml`
+        };
+
+        // DOM LOAD INITIALIZATION
+        window.onload = function() {
+            renderDashboard();
+            renderParties();
+            renderPriceLists();
+            renderSales();
+            renderPurchases();
+            showCodeTab('sale');
+            initCharts();
+        };
+
+        // NAVIGATION SWITCHER
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-tryton-accent', 'text-white');
+                btn.classList.add('text-slate-300', 'hover:bg-tryton-700');
+            });
+
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            if(activeBtn) {
+                activeBtn.classList.add('bg-tryton-accent', 'text-white');
+                activeBtn.classList.remove('text-slate-300', 'hover:bg-tryton-700');
+            }
+
+            // Title Update
+            const titles = {
+                dashboard: 'Resumen General',
+                parties: 'Gestión de Terceros (Clientes y Proveedores)',
+                pricelists: 'Listas de Precios & Tarifas',
+                sales: 'Ventas - Presupuestos y Órdenes (`sale.sale`)',
+                purchases: 'Compras - Aprovisionamiento (`purchase.purchase`)',
+                inspector: 'Tryton ORM Code Inspector'
+            };
+            document.getElementById('page-title').innerText = titles[tabId] || 'Tryton ERP';
+        }
+
+        // CHARTS SETUP
+        let salesVsPurchaseChartInstance = null;
+        let partyDistributionChartInstance = null;
+
+        function initCharts() {
+            const ctx1 = document.getElementById('salesVsPurchaseChart').getContext('2d');
+            salesVsPurchaseChartInstance = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre'],
+                    datasets: [
+                        { label: 'Ventas ($)', data: [1200000, 1900000, 1500000, 2200000, 1800000, 2199175], backgroundColor: '#2563eb' },
+                        { label: 'Compras ($)', data: [800000, 1100000, 950000, 1400000, 1000000, 1161600], backgroundColor: '#d97706' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            const ctx2 = document.getElementById('partyDistributionChart').getContext('2d');
+            partyDistributionChartInstance = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Clientes', 'Proveedores', 'Ambos'],
+                    datasets: [{
+                        data: [2, 1, 1],
+                        backgroundColor: ['#2563eb', '#d97706', '#6366f1']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        function updateChartsData() {
+            if(!partyDistributionChartInstance) return;
+            const clients = appState.parties.filter(p => p.role === 'CLIENTE').length;
+            const suppliers = appState.parties.filter(p => p.role === 'PROVEEDOR').length;
+            const both = appState.parties.filter(p => p.role === 'AMBOS').length;
+            
+            partyDistributionChartInstance.data.datasets[0].data = [clients, suppliers, both];
+            partyDistributionChartInstance.update();
+        }
+
+        // 1. DASHBOARD LOGIC
+        function renderDashboard() {
+            const salesTotal = appState.sales.filter(s => s.state !== 'cancelled').reduce((acc, s) => acc + s.total, 0);
+            const purchasesTotal = appState.purchases.filter(p => p.state !== 'cancelled').reduce((acc, p) => acc + p.total, 0);
+
+            document.getElementById('kpi-sales-total').innerText = `$${salesTotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpi-purchases-total').innerText = `$${purchasesTotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpi-parties-count').innerText = appState.parties.length;
+
+            // Render Recent Table
+            const recentContainer = document.getElementById('dashboard-recent-table');
+            recentContainer.innerHTML = '';
+
+            const combined = [
+                ...appState.sales.map(s => ({ ...s, type: 'VENTA', partner: s.partyName })),
+                ...appState.purchases.map(p => ({ ...p, type: 'COMPRA', partner: p.partyName }))
+            ].sort((a,b) => new Date(b.date) - new Date(a.date));
+
+            combined.slice(0, 5).forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-3 font-mono font-semibold text-slate-700">${item.id}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${item.type === 'VENTA' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}">${item.type}</span></td>
+                    <td class="p-3">${item.partner}</td>
+                    <td class="p-3">${getStateBadge(item.state)}</td>
+                    <td class="p-3 text-right font-semibold">$${item.total.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
+                `;
+                recentContainer.appendChild(tr);
+            });
+        }
+
+        // 2. PARTIES LOGIC
+        function renderParties() {
+            const search = document.getElementById('search-party')?.value.toLowerCase() || '';
+            const roleFilter = document.getElementById('filter-party-role')?.value || 'ALL';
+
+            const container = document.getElementById('parties-table-body');
+            container.innerHTML = '';
+
+            const filtered = appState.parties.filter(p => {
+                const matchesSearch = p.name.toLowerCase().includes(search) || p.cuit.includes(search) || p.email.toLowerCase().includes(search);
+                const matchesRole = roleFilter === 'ALL' || p.role === roleFilter;
+                return matchesSearch && matchesRole;
+            });
+
+            filtered.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-3.5 font-mono text-xs text-slate-500">${p.id}</td>
+                    <td class="p-3.5 font-semibold text-slate-800">${p.name}</td>
+                    <td class="p-3.5 font-mono text-xs text-slate-600">${p.cuit}</td>
+                    <td class="p-3.5">
+                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${p.role === 'CLIENTE' ? 'bg-blue-100 text-blue-800' : p.role === 'PROVEEDOR' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'}">
+                            ${p.role}
+                        </span>
+                    </td>
+                    <td class="p-3.5 text-slate-600">${p.email}</td>
+                    <td class="p-3.5 text-slate-600">${p.phone}</td>
+                    <td class="p-3.5 text-center"><span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500" title="Activo"></span></td>
+                `;
+                container.appendChild(tr);
+            });
+            updateChartsData();
+        }
+
+        function openPartyModal() { document.getElementById('party-modal').classList.remove('hidden'); }
+        function closePartyModal() { document.getElementById('party-modal').classList.add('hidden'); }
+        
+        function saveParty(e) {
+            e.preventDefault();
+            const newParty = {
+                id: `PARTY-00${appState.parties.length + 1}`,
+                name: document.getElementById('party-name').value,
+                cuit: document.getElementById('party-cuit').value,
+                role: document.getElementById('party-role').value,
+                email: document.getElementById('party-email').value,
+                phone: document.getElementById('party-phone').value,
+                active: true
+            };
+            appState.parties.push(newParty);
+            closePartyModal();
+            document.getElementById('party-form').reset();
+            renderParties();
+            renderDashboard();
+        }
+
+        // 3. PRICE LISTS LOGIC
+        function renderPriceLists() {
+            const container = document.getElementById('pricelists-cards-container');
+            container.innerHTML = '';
+
+            appState.priceLists.forEach(pl => {
+                const card = document.createElement('div');
+                card.className = 'bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative hover:border-blue-400 transition';
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-bold text-slate-800">${pl.name}</h4>
+                        <span class="px-2 py-1 rounded text-xs font-bold ${pl.discount > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}">
+                            ${pl.discount > 0 ? `-${pl.discount}%` : 'Base (0%)'}
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-4">${pl.description}</p>
+                    <div class="bg-slate-50 p-2.5 rounded font-mono text-xs text-slate-600 border border-slate-200">
+                        unit_price = base_price * (1 - ${pl.discount}/100)
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function openPriceListModal() { document.getElementById('pricelist-modal').classList.remove('hidden'); }
+        function closePriceListModal() { document.getElementById('pricelist-modal').classList.add('hidden'); }
+
+        function savePriceList(e) {
+            e.preventDefault();
+            const newPL = {
+                id: `PL-00${appState.priceLists.length + 1}`,
+                name: document.getElementById('pricelist-name').value,
+                discount: parseFloat(document.getElementById('pricelist-discount').value) || 0,
+                description: document.getElementById('pricelist-desc').value
+            };
+            appState.priceLists.push(newPL);
+            closePriceListModal();
+            document.getElementById('pricelist-form').reset();
+            renderPriceLists();
+        }
+
+        // 4. SALES (VENTAS) LOGIC
+        function renderSales() {
+            const search = document.getElementById('search-sales')?.value.toLowerCase() || '';
+            const stateFilter = document.getElementById('filter-sales-state')?.value || 'ALL';
+
+            const container = document.getElementById('sales-table-body');
+            container.innerHTML = '';
+
+            const filtered = appState.sales.filter(s => {
+                const matchesSearch = s.id.toLowerCase().includes(search) || s.partyName.toLowerCase().includes(search);
+                const matchesState = stateFilter === 'ALL' || s.state === stateFilter;
+                return matchesSearch && matchesState;
+            });
+
+            filtered.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-3.5 font-mono text-xs font-semibold text-blue-600">${s.id}</td>
+                    <td class="p-3.5 font-medium text-slate-800">${s.partyName}</td>
+                    <td class="p-3.5 text-xs text-slate-500">${s.date}</td>
+                    <td class="p-3.5 text-xs text-slate-600">${s.priceListName}</td>
+                    <td class="p-3.5 text-right">$${s.subtotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
+                    <td class="p-3.5 text-right text-slate-500">$${s.tax.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
+                    <td class="p-3.5 text-right font-bold text-slate-800">$${s.total.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
+                    <td class="p-3.5 text-center">${getStateBadge(s.state)}</td>
+                    <td class="p-3.5 text-center space-x-1">
+                        ${s.state === 'draft' ? `<button onclick="changeSaleState('${s.id}', 'confirmed')" class="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">Confirmar</button>` : ''}
+                        ${s.state === 'confirmed' ? `<button onclick="changeSaleState('${s.id}', 'processing')" class="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700">Procesar</button>` : ''}
+                        ${s.state !== 'cancelled' && s.state !== 'processing' ? `<button onclick="changeSaleState('${s.id}', 'cancelled')" class="px-2 py-1 bg-slate-200 text-slate-600 text-xs rounded hover:bg-slate-300">Cancelar</button>` : ''}
+                    </td>
+                `;
+                container.appendChild(tr);
+            });
+        }
+
+        function changeSaleState(saleId, newState) {
+            const sale = appState.sales.find(s => s.id === saleId);
+            if(sale) {
+                sale.state = newState;
+                renderSales();
+                renderDashboard();
+            }
+        }
+
+        let tempSaleLines = [];
+
+        function openSaleModal() {
+            const partySelect = document.getElementById('sale-party');
+            partySelect.innerHTML = appState.parties.filter(p => p.role === 'CLIENTE' || p.role === 'AMBOS').map(p => `<option value="${p.id}">${p.name} (${p.cuit})</option>`).join('');
+
+            const plSelect = document.getElementById('sale-pricelist');
+            plSelect.innerHTML = appState.priceLists.map(pl => `<option value="${pl.id}">${pl.name}</option>`).join('');
+
+            tempSaleLines = [{ productId: appState.products[0].id, qty: 1 }];
+            renderSaleLines();
+            document.getElementById('sale-modal').classList.remove('hidden');
+        }
+
+        function closeSaleModal() { document.getElementById('sale-modal').classList.add('hidden'); }
+
+        function addSaleLineItem() {
+            tempSaleLines.push({ productId: appState.products[0].id, qty: 1 });
+            renderSaleLines();
+        }
+
+        function removeSaleLineItem(idx) {
+            tempSaleLines.splice(idx, 1);
+            renderSaleLines();
+        }
+
+        function renderSaleLines() {
+            const container = document.getElementById('sale-lines-container');
+            container.innerHTML = '';
+
+            tempSaleLines.forEach((line, idx) => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center space-x-3 bg-white p-2 rounded border border-slate-200';
+                div.innerHTML = `
+                    <select onchange="tempSaleLines[${idx}].productId = this.value; calculateSaleTotals();" class="flex-1 border border-slate-300 rounded px-2 py-1 text-xs">
+                        ${appState.products.map(p => `<option value="${p.id}" ${p.id === line.productId ? 'selected' : ''}>${p.name} ($${p.basePrice.toLocaleString()})</option>`).join('')}
+                    </select>
+                    <input type="number" min="1" value="${line.qty}" onchange="tempSaleLines[${idx}].qty = parseInt(this.value) || 1; calculateSaleTotals();" class="w-16 border border-slate-300 rounded px-2 py-1 text-xs text-center">
+                    <button type="button" onclick="removeSaleLineItem(${idx})" class="text-red-500 hover:text-red-700 px-2"><i class="fa-solid fa-trash"></i></button>
+                `;
+                container.appendChild(div);
+            });
+            calculateSaleTotals();
+        }
+
+        function calculateSaleTotals() {
+            const plId = document.getElementById('sale-pricelist')?.value || appState.priceLists[0].id;
+            const priceList = appState.priceLists.find(pl => pl.id === plId);
+            const discountFactor = 1 - (priceList.discount / 100);
+
+            let subtotal = 0;
+            tempSaleLines.forEach(line => {
+                const prod = appState.products.find(p => p.id === line.productId);
+                if(prod) {
+                    subtotal += (prod.basePrice * discountFactor) * line.qty;
+                }
+            });
+
+            const tax = subtotal * 0.21;
+            const total = subtotal + tax;
+
+            document.getElementById('sale-subtotal-display').innerText = `$${subtotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+            document.getElementById('sale-tax-display').innerText = `$${tax.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+            document.getElementById('sale-total-display').innerText = `$${total.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+        }
+
+        function saveSale(e) {
+            e.preventDefault();
+            const partyId = document.getElementById('sale-party').value;
+            const party = appState.parties.find(p => p.id === partyId);
+            const plId = document.getElementById('sale-pricelist').value;
+            const priceList = appState.priceLists.find(pl => pl.id === plId);
+            const discountFactor = 1 - (priceList.discount / 100);
+
+            let subtotal = 0;
+            const items = tempSaleLines.map(line => {
+                const prod = appState.products.find(p => p.id === line.productId);
+                const unitPrice = prod.basePrice * discountFactor;
+                const lineTotal = unitPrice * line.qty;
+                subtotal += lineTotal;
+                return { productId: prod.id, productName: prod.name, qty: line.qty, unitPrice, lineTotal };
+            });
+
+            const tax = subtotal * 0.21;
+            const total = subtotal + tax;
+
+            const newSale = {
+                id: `SO-2026-00${appState.sales.length + 1}`,
+                partyId: party.id,
+                partyName: party.name,
+                date: new Date().toISOString().split('T')[0],
+                priceListId: priceList.id,
+                priceListName: priceList.name,
+                subtotal, tax, total,
+                state: 'draft',
+                items
+            };
+
+            appState.sales.push(newSale);
+            closeSaleModal();
+            renderSales();
+            renderDashboard();
+        }
+
+        // 5. PURCHASES (COMPRAS) LOGIC
+        function renderPurchases() {
+            const search = document.getElementById('search-purchases')?.value.toLowerCase() || '';
+            const stateFilter = document.getElementById('filter-purchases-state')?.value || 'ALL';
+
+            const container = document.getElementById('purchases-table-body');
+            container.innerHTML = '';
+
+            const filtered = appState.purchases.filter(p => {
+                const matchesSearch = p.id.toLowerCase().includes(search) || p.partyName.toLowerCase().includes(search);
+                const matchesState = stateFilter === 'ALL' || p.state === stateFilter;
+                return matchesSearch && matchesState;
+            });
+
+            filtered.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-3.5 font-mono text-xs font-semibold text-amber-600">${p.id}</td>
+                    <td class="p-3.5 font-medium text-slate-800">${p.partyName}</td>
+                    <td class="p-3.5 text-xs text-slate-500">${p.date}</td>
+                    <td class="p-3.5 text-right">$${p.subtotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
+                    <td class="p-3.5 text-right text-slate-500">$${p.tax.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
+                    <td class="p-3.5 text-right font-bold text-slate-800">$${p.total.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
+                    <td class="p-3.5 text-center">${getStateBadge(p.state)}</td>
+                    <td class="p-3.5 text-center space-x-1">
+                        ${p.state === 'draft' ? `<button onclick="changePurchaseState('${p.id}', 'confirmed')" class="px-2 py-1 bg-amber-600 text-white text-xs rounded hover:bg-amber-700">Confirmar</button>` : ''}
+                        ${p.state === 'confirmed' ? `<button onclick="changePurchaseState('${p.id}', 'processing')" class="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700">Procesar</button>` : ''}
+                        ${p.state !== 'cancelled' && p.state !== 'processing' ? `<button onclick="changePurchaseState('${p.id}', 'cancelled')" class="px-2 py-1 bg-slate-200 text-slate-600 text-xs rounded hover:bg-slate-300">Cancelar</button>` : ''}
+                    </td>
+                `;
+                container.appendChild(tr);
+            });
+        }
+
+        function changePurchaseState(purchaseId, newState) {
+            const purchase = appState.purchases.find(p => p.id === purchaseId);
+            if(purchase) {
+                purchase.state = newState;
+                renderPurchases();
+                renderDashboard();
+            }
+        }
+
+        let tempPurchaseLines = [];
+
+        function openPurchaseModal() {
+            const partySelect = document.getElementById('purchase-party');
+            partySelect.innerHTML = appState.parties.filter(p => p.role === 'PROVEEDOR' || p.role === 'AMBOS').map(p => `<option value="${p.id}">${p.name} (${p.cuit})</option>`).join('');
+
+            tempPurchaseLines = [{ productId: appState.products[0].id, qty: 1 }];
+            renderPurchaseLines();
+            document.getElementById('purchase-modal').classList.remove('hidden');
+        }
+
+        function closePurchaseModal() { document.getElementById('purchase-modal').classList.add('hidden'); }
+
+        function addPurchaseLineItem() {
+            tempPurchaseLines.push({ productId: appState.products[0].id, qty: 1 });
+            renderPurchaseLines();
+        }
+
+        function removePurchaseLineItem(idx) {
+            tempPurchaseLines.splice(idx, 1);
+            renderPurchaseLines();
+        }
+
+        function renderPurchaseLines() {
+            const container = document.getElementById('purchase-lines-container');
+            container.innerHTML = '';
+
+            tempPurchaseLines.forEach((line, idx) => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center space-x-3 bg-white p-2 rounded border border-slate-200';
+                div.innerHTML = `
+                    <select onchange="tempPurchaseLines[${idx}].productId = this.value; calculatePurchaseTotals();" class="flex-1 border border-slate-300 rounded px-2 py-1 text-xs">
+                        ${appState.products.map(p => `<option value="${p.id}" ${p.id === line.productId ? 'selected' : ''}>${p.name} ($${p.basePrice.toLocaleString()})</option>`).join('')}
+                    </select>
+                    <input type="number" min="1" value="${line.qty}" onchange="tempPurchaseLines[${idx}].qty = parseInt(this.value) || 1; calculatePurchaseTotals();" class="w-16 border border-slate-300 rounded px-2 py-1 text-xs text-center">
+                    <button type="button" onclick="removePurchaseLineItem(${idx})" class="text-red-500 hover:text-red-700 px-2"><i class="fa-solid fa-trash"></i></button>
+                `;
+                container.appendChild(div);
+            });
+            calculatePurchaseTotals();
+        }
+
+        function calculatePurchaseTotals() {
+            let subtotal = 0;
+            tempPurchaseLines.forEach(line => {
+                const prod = appState.products.find(p => p.id === line.productId);
+                if(prod) {
+                    subtotal += prod.basePrice * line.qty;
+                }
+            });
+
+            const tax = subtotal * 0.21;
+            const total = subtotal + tax;
+
+            document.getElementById('purchase-subtotal-display').innerText = `$${subtotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+            document.getElementById('purchase-tax-display').innerText = `$${tax.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+            document.getElementById('purchase-total-display').innerText = `$${total.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+        }
+
+        function savePurchase(e) {
+            e.preventDefault();
+            const partyId = document.getElementById('purchase-party').value;
+            const party = appState.parties.find(p => p.id === partyId);
+
+            let subtotal = 0;
+            const items = tempPurchaseLines.map(line => {
+                const prod = appState.products.find(p => p.id === line.productId);
+                const unitPrice = prod.basePrice;
+                const lineTotal = unitPrice * line.qty;
+                subtotal += lineTotal;
+                return { productId: prod.id, productName: prod.name, qty: line.qty, unitPrice, lineTotal };
+            });
+
+            const tax = subtotal * 0.21;
+            const total = subtotal + tax;
+
+            const newPurchase = {
+                id: `PO-2026-00${appState.purchases.length + 1}`,
+                partyId: party.id,
+                partyName: party.name,
+                date: new Date().toISOString().split('T')[0],
+                subtotal, tax, total,
+                state: 'draft',
+                items
+            };
+
+            appState.purchases.push(newPurchase);
+            closePurchaseModal();
+            renderPurchases();
+            renderDashboard();
+        }
+
+        // UTILITY: STATE BADGES
+        function getStateBadge(state) {
+            switch(state) {
+                case 'draft':
+                    return `<span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-300">Borrador</span>`;
+                case 'confirmed':
+                    return `<span class="px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">Confirmado</span>`;
+                case 'processing':
+                    return `<span class="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">Procesado</span>`;
+                case 'cancelled':
+                    return `<span class="px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-700 border border-red-200">Cancelado</span>`;
+                default:
+                    return `<span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600">${state}</span>`;
+            }
+        }
+
+        // 6. CODE INSPECTOR TAB SWITCHER
+        function showCodeTab(key) {
+            document.querySelectorAll('.code-tab-btn').forEach(btn => {
+                btn.classList.remove('bg-amber-500', 'text-slate-950', 'font-bold');
+                btn.classList.add('bg-slate-800', 'text-slate-300');
+            });
+            const activeBtn = document.getElementById(`code-btn-${key}`);
+            if(activeBtn) {
+                activeBtn.classList.add('bg-amber-500', 'text-slate-950', 'font-bold');
+                activeBtn.classList.remove('bg-slate-800', 'text-slate-300');
+            }
+
+            document.getElementById('code-block').innerText = codeSnippets[key] || '';
+        }
+    </script>
+</body>
+</html>
