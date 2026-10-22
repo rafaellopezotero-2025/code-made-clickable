@@ -85,6 +85,12 @@
                 <span>Listas de Precios</span>
             </button>
 
+            <button onclick="switchTab('products')" id="nav-products" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-tryton-700 hover:text-white transition-colors">
+                <i class="fa-solid fa-boxes-stacked w-5 text-center"></i>
+                <span>Productos & Stock</span>
+                <span id="nav-stock-alert" class="ml-auto hidden px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500 text-white"></span>
+            </button>
+
             <button onclick="switchTab('sales')" id="nav-sales" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-tryton-700 hover:text-white transition-colors">
                 <i class="fa-solid fa-file-invoice-dollar w-5 text-center"></i>
                 <span>Ventas (Sale)</span>
@@ -95,12 +101,7 @@
                 <span>Compras (Purchase)</span>
             </button>
 
-            <div class="pt-4 px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Desarrollo & Modelo</div>
-            
-            <button onclick="switchTab('inspector')" id="nav-inspector" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-tryton-700 hover:text-white transition-colors">
-                <i class="fa-solid fa-code w-5 text-center text-amber-400"></i>
-                <span class="text-amber-300">Tryton Code Inspector</span>
-            </button>
+
         </nav>
 
         <!-- Company & User Info -->
@@ -387,6 +388,48 @@
                 </div>
             </div>
 
+            <!-- PRODUCTS TAB -->
+            <div id="tab-products" class="tab-content hidden space-y-6">
+                <div id="stock-alerts" class="space-y-2"></div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                        <div class="flex gap-3 flex-wrap">
+                            <input id="search-product" oninput="renderProducts()" placeholder="Buscar producto..." class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                            <select id="filter-product-stock" onchange="renderProducts()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                                <option value="ALL">Todos</option><option value="green">🟢 Stock OK</option><option value="yellow">🟡 Cerca de reposición</option><option value="red">🔴 Reponer</option>
+                            </select>
+                        </div>
+                        <button onclick="openProductModal()" class="bg-tryton-accent text-white px-4 py-2 rounded-lg text-sm font-semibold"><i class="fa-solid fa-plus mr-1"></i> Nuevo Producto</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr>
+                            <th class="p-3">Código</th><th class="p-3">Producto</th><th class="p-3 text-right">Costo</th><th class="p-3 text-right">Precio venta</th><th class="p-3 text-right">Margen</th><th class="p-3 text-right">Stock</th><th class="p-3 text-right">Punto repos.</th><th class="p-3 text-center">Semáforo</th><th class="p-3 text-center">Ajustar</th>
+                        </tr></thead>
+                        <tbody id="products-table-body" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-3">🟢 Stock por encima del 150% del punto de reposición · 🟡 Entre el punto y el 150% · 🔴 En o por debajo del punto de reposición. Las compras confirmadas suman stock y las ventas confirmadas lo descuentan.</p>
+                </div>
+            </div>
+
+            <div id="product-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <form id="product-form" onsubmit="saveProduct(event)" class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 space-y-3">
+                    <h3 class="text-lg font-bold text-slate-800">Nuevo Producto</h3>
+                    <label class="block text-sm">Nombre<input id="product-name" required class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2"></label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="block text-sm">Precio de costo ($)<input id="product-cost" type="number" min="0" step="0.01" required class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2"></label>
+                        <label class="block text-sm">Precio de venta ($)<input id="product-price" type="number" min="0" step="0.01" required class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2"></label>
+                        <label class="block text-sm">Stock inicial<input id="product-stock" type="number" min="0" required class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2"></label>
+                        <label class="block text-sm">Punto de reposición<input id="product-reorder" type="number" min="0" required class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2"></label>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeProductModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-sm">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 rounded-lg bg-tryton-accent text-white text-sm font-semibold">Guardar</button>
+                    </div>
+                </form>
+            </div>
+
             <!-- 6. TRYTON CODE INSPECTOR TAB -->
             <div id="tab-inspector" class="tab-content hidden space-y-6">
                 <div class="bg-slate-900 text-slate-100 p-6 rounded-xl shadow-md border border-slate-800">
@@ -613,10 +656,10 @@
                 { id: 'PL-003', name: 'Cliente VIP (-20%)', discount: 20, description: 'Tarifa preferencial para cuentas corporativas clave.' }
             ],
             products: [
-                { id: 'PROD-01', name: 'Servidor Rack 1U Intel Xeon', basePrice: 1200000 },
-                { id: 'PROD-02', name: 'Switch Gestionable 24 Puertos', basePrice: 350000 },
-                { id: 'PROD-03', name: 'Licencia Software Tryton ERP Enterprise', basePrice: 250000 },
-                { id: 'PROD-04', name: 'Módulo UPS 3000VA Online', basePrice: 480000 }
+                { id: 'PROD-01', name: 'Servidor Rack 1U Intel Xeon', basePrice: 1200000, cost: 850000, stock: 12, reorderPoint: 5 },
+                { id: 'PROD-02', name: 'Switch Gestionable 24 Puertos', basePrice: 350000, cost: 220000, stock: 6, reorderPoint: 5 },
+                { id: 'PROD-03', name: 'Licencia Software Tryton ERP Enterprise', basePrice: 250000, cost: 90000, stock: 40, reorderPoint: 10 },
+                { id: 'PROD-04', name: 'Módulo UPS 3000VA Online', basePrice: 480000, cost: 310000, stock: 2, reorderPoint: 4 }
             ],
             sales: [
                 {
@@ -769,6 +812,7 @@ xml:
             renderPriceLists();
             renderSales();
             renderPurchases();
+            renderProducts();
             showCodeTab('sale');
             initCharts();
         };
@@ -796,7 +840,8 @@ xml:
                 pricelists: 'Listas de Precios & Tarifas',
                 sales: 'Ventas - Presupuestos y Órdenes (`sale.sale`)',
                 purchases: 'Compras - Aprovisionamiento (`purchase.purchase`)',
-                inspector: 'Tryton ORM Code Inspector'
+                inspector: 'Tryton ORM Code Inspector',
+                products: 'Productos, Costos & Control de Stock'
             };
             document.getElementById('page-title').innerText = titles[tabId] || 'Tryton ERP';
         }
@@ -1255,6 +1300,78 @@ xml:
             closePurchaseModal();
             renderPurchases();
             renderDashboard();
+        }
+
+        // PRODUCTS & STOCK LOGIC
+        function stockLevel(p) {
+            if (p.stock <= p.reorderPoint) return 'red';
+            if (p.stock <= p.reorderPoint * 1.5) return 'yellow';
+            return 'green';
+        }
+        const fmt = n => '$' + Number(n).toLocaleString('es-AR', { maximumFractionDigits: 2 });
+        function renderProducts() {
+            const search = document.getElementById('search-product')?.value.toLowerCase() || '';
+            const lv = document.getElementById('filter-product-stock')?.value || 'ALL';
+            const body = document.getElementById('products-table-body');
+            body.innerHTML = '';
+            const colors = { green: 'bg-emerald-500', yellow: 'bg-amber-400', red: 'bg-red-500' };
+            const labels = { green: 'Stock OK', yellow: 'Cerca de reposición', red: 'Reponer' };
+            appState.products.filter(p => (p.name.toLowerCase().includes(search) || p.id.toLowerCase().includes(search)) && (lv === 'ALL' || stockLevel(p) === lv)).forEach(p => {
+                const l = stockLevel(p);
+                const margin = p.basePrice > 0 ? ((p.basePrice - p.cost) / p.basePrice * 100).toFixed(1) : '0';
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50';
+                tr.innerHTML = `
+                    <td class="p-3 font-mono text-xs text-slate-500">${p.id}</td>
+                    <td class="p-3 font-semibold text-slate-800">${p.name}</td>
+                    <td class="p-3 text-right">${fmt(p.cost)}</td>
+                    <td class="p-3 text-right">${fmt(p.basePrice)}</td>
+                    <td class="p-3 text-right ${margin < 0 ? 'text-red-600' : 'text-emerald-700'}">${margin}%</td>
+                    <td class="p-3 text-right font-bold">${p.stock}</td>
+                    <td class="p-3 text-right text-slate-600">${p.reorderPoint}</td>
+                    <td class="p-3 text-center"><span class="inline-flex items-center gap-1.5 text-xs"><span class="w-3 h-3 rounded-full ${colors[l]}"></span>${labels[l]}</span></td>
+                    <td class="p-3 text-center whitespace-nowrap">
+                        <button onclick="adjustStock('${p.id}',-1)" class="w-7 h-7 rounded border border-slate-300 hover:bg-slate-100">−</button>
+                        <button onclick="adjustStock('${p.id}',1)" class="w-7 h-7 rounded border border-slate-300 hover:bg-slate-100">+</button>
+                    </td>`;
+                body.appendChild(tr);
+            });
+            renderStockAlerts();
+        }
+        function renderStockAlerts() {
+            const low = appState.products.filter(p => stockLevel(p) === 'red');
+            const near = appState.products.filter(p => stockLevel(p) === 'yellow');
+            const box = document.getElementById('stock-alerts');
+            box.innerHTML = low.map(p => `<div class="flex items-center gap-2 bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 text-sm"><i class="fa-solid fa-triangle-exclamation"></i><b>${p.name}</b> llegó al punto de reposición (stock ${p.stock} / punto ${p.reorderPoint}). Generar orden de compra.</div>`).join('')
+                + near.map(p => `<div class="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-4 py-2.5 text-sm"><i class="fa-solid fa-circle-exclamation"></i><b>${p.name}</b> está cerca del punto de reposición (stock ${p.stock} / punto ${p.reorderPoint}).</div>`).join('');
+            const badge = document.getElementById('nav-stock-alert');
+            if (badge) { badge.textContent = low.length; badge.classList.toggle('hidden', low.length === 0); }
+        }
+        function adjustStock(id, delta) {
+            const p = appState.products.find(x => x.id === id);
+            p.stock = Math.max(0, p.stock + delta);
+            renderProducts();
+        }
+        function applyStockMovement(items, sign) {
+            (items || []).forEach(it => { const p = appState.products.find(x => x.id === it.productId); if (p) p.stock = Math.max(0, p.stock + sign * it.qty); });
+            renderProducts();
+        }
+        function openProductModal() { document.getElementById('product-modal').classList.remove('hidden'); }
+        function closeProductModal() { document.getElementById('product-modal').classList.add('hidden'); }
+        function saveProduct(e) {
+            e.preventDefault();
+            const n = appState.products.length + 1;
+            appState.products.push({
+                id: `PROD-${String(n).padStart(2, '0')}`,
+                name: document.getElementById('product-name').value,
+                cost: parseFloat(document.getElementById('product-cost').value),
+                basePrice: parseFloat(document.getElementById('product-price').value),
+                stock: parseInt(document.getElementById('product-stock').value, 10),
+                reorderPoint: parseInt(document.getElementById('product-reorder').value, 10)
+            });
+            document.getElementById('product-form').reset();
+            closeProductModal();
+            renderProducts();
         }
 
         // UTILITY: STATE BADGES
