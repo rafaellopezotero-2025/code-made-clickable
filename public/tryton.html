@@ -335,7 +335,6 @@
                                 <th class="p-3.5">Fecha</th>
                                 <th class="p-3.5">Lista de Precios</th>
                                 <th class="p-3.5 text-right">Subtotal</th>
-                                <th class="p-3.5 text-right">Impuestos (IVA)</th>
                                 <th class="p-3.5 text-right">Total</th>
                                 <th class="p-3.5 text-center">Estado</th>
                                 <th class="p-3.5 text-center">Acciones State Machine</th>
@@ -375,7 +374,6 @@
                                 <th class="p-3.5">Proveedor</th>
                                 <th class="p-3.5">Fecha</th>
                                 <th class="p-3.5 text-right">Subtotal</th>
-                                <th class="p-3.5 text-right">Impuestos (21%)</th>
                                 <th class="p-3.5 text-right">Total</th>
                                 <th class="p-3.5 text-center">Estado</th>
                                 <th class="p-3.5 text-center">Acciones State Machine</th>
@@ -554,10 +552,9 @@
 
                 <!-- TOTALS DISPLAY -->
                 <div class="bg-slate-50 p-4 rounded-lg flex justify-between items-center text-sm border border-slate-200">
-                    <span class="text-slate-500 text-xs">Impuesto predeterminado: IVA 21%</span>
+                    <span class="text-slate-500 text-xs">Totales sin impuestos</span>
                     <div class="text-right space-y-1">
                         <div><span class="text-slate-500 mr-2">Subtotal:</span> <strong id="sale-subtotal-display">$0.00</strong></div>
-                        <div><span class="text-slate-500 mr-2">IVA (21%):</span> <strong id="sale-tax-display">$0.00</strong></div>
                         <div class="text-base text-blue-700 font-bold"><span class="mr-2">Total Venta:</span> <span id="sale-total-display">$0.00</span></div>
                     </div>
                 </div>
@@ -604,7 +601,6 @@
                     <span class="text-slate-500 text-xs">Aprovisionamiento con Almacén Central</span>
                     <div class="text-right space-y-1">
                         <div><span class="text-slate-500 mr-2">Subtotal:</span> <strong id="purchase-subtotal-display">$0.00</strong></div>
-                        <div><span class="text-slate-500 mr-2">IVA (21%):</span> <strong id="purchase-tax-display">$0.00</strong></div>
                         <div class="text-base text-amber-700 font-bold"><span class="mr-2">Total Compra:</span> <span id="purchase-total-display">$0.00</span></div>
                     </div>
                 </div>
@@ -679,8 +675,7 @@
                     priceListId: 'PL-002',
                     priceListName: 'Mayorista (-15%)',
                     subtotal: 1317500,
-                    tax: 276675,
-                    total: 1594175,
+                    total: 1317500,
                     state: 'processing', // draft, confirmed, processing, cancelled
                     items: [
                         { productId: 'PROD-01', productName: 'Servidor Rack 1U Intel Xeon', qty: 1, unitPrice: 1020000, lineTotal: 1020000 },
@@ -695,8 +690,7 @@
                     priceListId: 'PL-001',
                     priceListName: 'Precio Base / Minorista',
                     subtotal: 500000,
-                    tax: 105000,
-                    total: 605000,
+                    total: 500000,
                     state: 'confirmed',
                     items: [
                         { productId: 'PROD-03', productName: 'Licencia Software Tryton ERP Enterprise', qty: 2, unitPrice: 250000, lineTotal: 500000 }
@@ -710,8 +704,7 @@
                     partyName: 'Distribuidora Paraná SRL',
                     date: '2026-10-15',
                     subtotal: 960000,
-                    tax: 201600,
-                    total: 1161600,
+                    total: 960000,
                     state: 'processing',
                     items: [
                         { productId: 'PROD-04', productName: 'Módulo UPS 3000VA Online', qty: 2, unitPrice: 480000, lineTotal: 960000 }
@@ -1065,7 +1058,6 @@ xml:
                     <td class="p-3.5 text-xs text-slate-500">${s.date}</td>
                     <td class="p-3.5 text-xs text-slate-600">${s.priceListName}</td>
                     <td class="p-3.5 text-right">$${s.subtotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
-                    <td class="p-3.5 text-right text-slate-500">$${s.tax.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
                     <td class="p-3.5 text-right font-bold text-slate-800">$${s.total.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
                     <td class="p-3.5 text-center">${getStateBadge(s.state)}</td>
                     <td class="p-3.5 text-center space-x-1">
@@ -1087,7 +1079,7 @@ xml:
                 detailTr.id = `detail-sales-${s.id}`;
                 detailTr.className = 'hidden';
                 detailTr.innerHTML = `
-                    <td colspan="9" class="bg-slate-50 border-b border-slate-100 p-0">
+                    <td colspan="8" class="bg-slate-50 border-b border-slate-100 p-0">
                         <div class="px-16 py-3">
                             <p class="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Productos y descripciones</p>
                             ${itemsHtml}
@@ -1174,11 +1166,9 @@ xml:
                 }
             });
 
-            const tax = subtotal * 0.21;
-            const total = subtotal + tax;
+            const total = subtotal;
 
             document.getElementById('sale-subtotal-display').innerText = `$${subtotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
-            document.getElementById('sale-tax-display').innerText = `$${tax.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
             document.getElementById('sale-total-display').innerText = `$${total.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
         }
 
@@ -1199,8 +1189,7 @@ xml:
                 return { productId: prod.id, productName: prod.name, qty: line.qty, unitPrice, lineTotal };
             });
 
-            const tax = subtotal * 0.21;
-            const total = subtotal + tax;
+            const total = subtotal;
 
             const newSale = {
                 id: `SO-2026-00${appState.sales.length + 1}`,
@@ -1209,7 +1198,7 @@ xml:
                 date: new Date().toISOString().split('T')[0],
                 priceListId: priceList.id,
                 priceListName: priceList.name,
-                subtotal, tax, total,
+                subtotal, total,
                 state: 'draft',
                 items
             };
@@ -1242,7 +1231,6 @@ xml:
                     <td class="p-3.5 font-medium text-slate-800">${p.partyName}</td>
                     <td class="p-3.5 text-xs text-slate-500">${p.date}</td>
                     <td class="p-3.5 text-right">$${p.subtotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
-                    <td class="p-3.5 text-right text-slate-500">$${p.tax.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
                     <td class="p-3.5 text-right font-bold text-slate-800">$${p.total.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
                     <td class="p-3.5 text-center">${getStateBadge(p.state)}</td>
                     <td class="p-3.5 text-center space-x-1">
@@ -1264,7 +1252,7 @@ xml:
                 detailTr.id = `detail-purchases-${p.id}`;
                 detailTr.className = 'hidden';
                 detailTr.innerHTML = `
-                    <td colspan="8" class="bg-slate-50 border-b border-slate-100 p-0">
+                    <td colspan="7" class="bg-slate-50 border-b border-slate-100 p-0">
                         <div class="px-16 py-3">
                             <p class="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Productos y descripciones</p>
                             ${itemsHtml}
@@ -1344,11 +1332,9 @@ xml:
                 }
             });
 
-            const tax = subtotal * 0.21;
-            const total = subtotal + tax;
+            const total = subtotal;
 
             document.getElementById('purchase-subtotal-display').innerText = `$${subtotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
-            document.getElementById('purchase-tax-display').innerText = `$${tax.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
             document.getElementById('purchase-total-display').innerText = `$${total.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
         }
 
@@ -1366,15 +1352,14 @@ xml:
                 return { productId: prod.id, productName: prod.name, qty: line.qty, unitPrice, lineTotal };
             });
 
-            const tax = subtotal * 0.21;
-            const total = subtotal + tax;
+            const total = subtotal;
 
             const newPurchase = {
                 id: `PO-2026-00${appState.purchases.length + 1}`,
                 partyId: party.id,
                 partyName: party.name,
                 date: new Date().toISOString().split('T')[0],
-                subtotal, tax, total,
+                subtotal, total,
                 state: 'draft',
                 items
             };
