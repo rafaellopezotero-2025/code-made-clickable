@@ -844,6 +844,71 @@ xml:
     party.xml`
         };
 
+        // ============ AUTH & ROLES (DEMO) ============
+        const DEMO_USERS = [
+            { username: 'admin', password: 'admin123', name: 'Ana Administradora', role: 'administrador' },
+            { username: 'caja', password: 'caja123', name: 'Carlos Caja', role: 'caja' },
+            { username: 'consulta', password: 'consulta123', name: 'Cecilia Consultas', role: 'consultas' }
+        ];
+        const ROLE_LABELS = { administrador: 'Administrador', caja: 'Caja', consultas: 'Consultas' };
+        const ROLE_TABS = {
+            administrador: ['dashboard', 'parties', 'pricelists', 'products', 'sales', 'purchases'],
+            caja: ['sales'],
+            consultas: ['products', 'pricelists']
+        };
+        const ROLE_DEFAULT_TAB = { administrador: 'dashboard', caja: 'sales', consultas: 'products' };
+        let currentUser = null;
+
+        function can(tab) { return currentUser && ROLE_TABS[currentUser.role].includes(tab); }
+        function canEditProducts() { return currentUser && currentUser.role === 'administrador'; }
+
+        function login(e) {
+            e.preventDefault();
+            const u = document.getElementById('login-user').value.trim().toLowerCase();
+            const p = document.getElementById('login-pass').value;
+            const user = DEMO_USERS.find(x => x.username === u && x.password === p);
+            const err = document.getElementById('login-error');
+            if (!user) { err.classList.remove('hidden'); return; }
+            err.classList.add('hidden');
+            currentUser = user;
+            document.getElementById('login-screen').classList.add('hidden');
+            const sidebar = document.getElementById('app-sidebar');
+            const main = document.getElementById('app-main');
+            sidebar.classList.remove('hidden'); sidebar.classList.add('flex');
+            main.classList.remove('hidden'); main.classList.add('flex');
+            applyRolePermissions();
+            switchTab(ROLE_DEFAULT_TAB[user.role]);
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('login-pass').value = '';
+            document.getElementById('login-screen').classList.remove('hidden');
+            const sidebar = document.getElementById('app-sidebar');
+            const main = document.getElementById('app-main');
+            sidebar.classList.add('hidden'); sidebar.classList.remove('flex');
+            main.classList.add('hidden'); main.classList.remove('flex');
+        }
+
+        function applyRolePermissions() {
+            // Nav: show only allowed modules
+            ['dashboard', 'parties', 'pricelists', 'products', 'sales', 'purchases'].forEach(t => {
+                const btn = document.getElementById(`nav-${t}`);
+                if (btn) btn.style.display = can(t) ? '' : 'none';
+            });
+            // Header quick actions
+            document.getElementById('qa-party').style.display = currentUser.role === 'administrador' ? '' : 'none';
+            document.getElementById('qa-sale').style.display = can('sales') ? '' : 'none';
+            document.getElementById('qa-purchase').style.display = can('purchases') ? '' : 'none';
+            // Read-only buttons for "consultas"
+            document.getElementById('btn-new-product').style.display = canEditProducts() ? '' : 'none';
+            document.getElementById('btn-new-pricelist').style.display = currentUser.role === 'administrador' ? '' : 'none';
+            // User chip
+            document.getElementById('user-chip-name').innerText = currentUser.name;
+            document.getElementById('user-chip-role').innerText = ROLE_LABELS[currentUser.role];
+            renderProducts();
+        }
+
         // DOM LOAD INITIALIZATION
         window.onload = function() {
             renderDashboard();
@@ -858,6 +923,7 @@ xml:
 
         // NAVIGATION SWITCHER
         function switchTab(tabId) {
+            if (currentUser && !can(tabId)) return; // role guard
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
 
