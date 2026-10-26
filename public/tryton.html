@@ -1501,10 +1501,10 @@ xml:
                     <td class="p-3 text-right font-bold">${p.stock}</td>
                     <td class="p-3 text-right text-slate-600">${p.reorderPoint}</td>
                     <td class="p-3 text-center"><span class="inline-flex items-center gap-1.5 text-xs"><span class="w-3 h-3 rounded-full ${colors[l]}"></span>${labels[l]}</span></td>
-                    <td class="p-3 text-center whitespace-nowrap">
+                    ${canEditProducts() ? `<td class="p-3 text-center whitespace-nowrap">
                         <button onclick="adjustStock('${p.id}',-1)" class="w-7 h-7 rounded border border-slate-300 hover:bg-slate-100">−</button>
                         <button onclick="adjustStock('${p.id}',1)" class="w-7 h-7 rounded border border-slate-300 hover:bg-slate-100">+</button>
-                    </td>`;
+                    </td>` : `<td class="p-3 text-center text-xs text-slate-400 italic">Solo lectura</td>`}`;
                 body.appendChild(tr);
             });
             renderStockAlerts();
@@ -1519,6 +1519,7 @@ xml:
             if (badge) { badge.textContent = low.length; badge.classList.toggle('hidden', low.length === 0); }
         }
         function adjustStock(id, delta) {
+            if (!canEditProducts()) return;
             const p = appState.products.find(x => x.id === id);
             p.stock = Math.max(0, p.stock + delta);
             renderProducts();
