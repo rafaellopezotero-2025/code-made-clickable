@@ -1060,7 +1060,7 @@ xml:
             updateChartsData();
         }
 
-        function openPartyModal() { document.getElementById('party-modal').classList.remove('hidden'); }
+        function openPartyModal() { if (currentUser && currentUser.role !== 'administrador') return; document.getElementById('party-modal').classList.remove('hidden'); }
         function closePartyModal() { document.getElementById('party-modal').classList.add('hidden'); }
         
         function saveParty(e) {
@@ -1105,7 +1105,7 @@ xml:
             });
         }
 
-        function openPriceListModal() { document.getElementById('pricelist-modal').classList.remove('hidden'); }
+        function openPriceListModal() { if (currentUser && currentUser.role !== 'administrador') return; document.getElementById('pricelist-modal').classList.remove('hidden'); }
         function closePriceListModal() { document.getElementById('pricelist-modal').classList.add('hidden'); }
 
         function savePriceList(e) {
@@ -1206,6 +1206,7 @@ xml:
         let tempSaleLines = [];
 
         function openSaleModal() {
+            if (currentUser && !can('sales')) return;
             const partySelect = document.getElementById('sale-party');
             partySelect.innerHTML = appState.parties.filter(p => p.role === 'CLIENTE' || p.role === 'AMBOS').map(p => `<option value="${p.id}">${p.name} (${p.cuit})</option>`).join('');
 
@@ -1379,6 +1380,7 @@ xml:
         let tempPurchaseLines = [];
 
         function openPurchaseModal() {
+            if (currentUser && !can('purchases')) return;
             const partySelect = document.getElementById('purchase-party');
             partySelect.innerHTML = appState.parties.filter(p => p.role === 'PROVEEDOR' || p.role === 'AMBOS').map(p => `<option value="${p.id}">${p.name} (${p.cuit})</option>`).join('');
 
@@ -1532,6 +1534,7 @@ xml:
         function closeProductModal() { document.getElementById('product-modal').classList.add('hidden'); }
         function saveProduct(e) {
             e.preventDefault();
+            if (!canEditProducts()) return;
             const n = appState.products.length + 1;
             appState.products.push({
                 id: `PROD-${String(n).padStart(2, '0')}`,
