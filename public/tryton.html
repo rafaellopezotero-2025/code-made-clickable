@@ -1528,7 +1528,7 @@ xml:
             (items || []).forEach(it => { const p = appState.products.find(x => x.id === it.productId); if (p) p.stock = Math.max(0, p.stock + sign * it.qty); });
             renderProducts();
         }
-        function openProductModal() { document.getElementById('product-modal').classList.remove('hidden'); }
+        function openProductModal() { if (!canEditProducts()) return; document.getElementById('product-modal').classList.remove('hidden'); }
         function closeProductModal() { document.getElementById('product-modal').classList.add('hidden'); }
         function saveProduct(e) {
             e.preventDefault();
