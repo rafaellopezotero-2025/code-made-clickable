@@ -50,8 +50,35 @@
 </head>
 <body class="bg-slate-100 text-slate-800 flex h-screen overflow-hidden">
 
+    <!-- LOGIN SCREEN (demo) -->
+    <div id="login-screen" class="fixed inset-0 z-[100] bg-tryton-800 flex items-center justify-center p-4">
+        <form onsubmit="login(event)" class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 space-y-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded bg-tryton-accent flex items-center justify-center font-bold text-white text-xl shadow">T</div>
+                <div>
+                    <h1 class="font-bold text-slate-800 leading-tight">Tryton ERP</h1>
+                    <span class="text-xs text-slate-500">Ventas & Compras v7.0 — Acceso de usuarios</span>
+                </div>
+            </div>
+            <label class="block text-sm font-medium text-slate-700">Usuario
+                <input id="login-user" required autocomplete="username" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ingrese su usuario">
+            </label>
+            <label class="block text-sm font-medium text-slate-700">Contraseña
+                <input id="login-pass" type="password" required autocomplete="current-password" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••">
+            </label>
+            <p id="login-error" class="hidden text-xs text-red-600 font-medium">Usuario o contraseña incorrectos.</p>
+            <button type="submit" class="w-full bg-tryton-accent hover:bg-blue-700 text-white font-semibold text-sm py-2.5 rounded-lg shadow transition">Ingresar</button>
+            <div class="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
+                <p class="font-semibold text-slate-600">Usuarios de demostración:</p>
+                <p><b>admin / admin123</b> — Administrador (acceso total)</p>
+                <p><b>caja / caja123</b> — Caja (solo ventas)</p>
+                <p><b>consulta / consulta123</b> — Consultas (productos y precios, solo lectura)</p>
+            </div>
+        </form>
+    </div>
+
     <!-- SIDEBAR / TRYTON MODULE MENU -->
-    <aside class="w-64 bg-tryton-800 text-slate-200 flex flex-col flex-shrink-0 shadow-lg">
+    <aside id="app-sidebar" class="hidden w-64 bg-tryton-800 text-slate-200 flex-col flex-shrink-0 shadow-lg">
         <!-- Logo Header -->
         <div class="p-4 border-b border-tryton-700 flex items-center justify-between bg-tryton-700/50">
             <div class="flex items-center space-x-3">
@@ -115,7 +142,7 @@
     </aside>
 
     <!-- MAIN CONTENT AREA -->
-    <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50">
+    <main id="app-main" class="hidden flex-1 flex-col min-w-0 overflow-hidden bg-slate-50">
         
         <!-- TOP TOOLBAR / HEADER -->
         <header class="bg-white border-b border-slate-200 h-14 px-6 flex items-center justify-between flex-shrink-0">
@@ -126,18 +153,28 @@
 
             <!-- Global Quick Actions -->
             <div class="flex items-center space-x-3">
-                <button onclick="openPartyModal()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-300 transition flex items-center space-x-1">
+                <button id="qa-party" onclick="openPartyModal()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-300 transition flex items-center space-x-1">
                     <i class="fa-solid fa-plus text-slate-500"></i>
                     <span>Nuevo Tercero</span>
                 </button>
-                <button onclick="openSaleModal()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded font-medium shadow-sm transition flex items-center space-x-1">
+                <button id="qa-sale" onclick="openSaleModal()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded font-medium shadow-sm transition flex items-center space-x-1">
                     <i class="fa-solid fa-cart-plus"></i>
                     <span>Nueva Venta</span>
                 </button>
-                <button onclick="openPurchaseModal()" class="text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded font-medium shadow-sm transition flex items-center space-x-1">
+                <button id="qa-purchase" onclick="openPurchaseModal()" class="text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded font-medium shadow-sm transition flex items-center space-x-1">
                     <i class="fa-solid fa-bag-shopping"></i>
                     <span>Nueva Compra</span>
                 </button>
+                <div class="flex items-center space-x-2 pl-3 border-l border-slate-200">
+                    <div class="text-right leading-tight">
+                        <div id="user-chip-name" class="text-xs font-semibold text-slate-800"></div>
+                        <div id="user-chip-role" class="text-[10px] text-slate-500 uppercase tracking-wide"></div>
+                    </div>
+                    <button onclick="logout()" title="Cerrar sesión" class="text-xs bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 px-2.5 py-1.5 rounded font-medium border border-slate-300 transition flex items-center space-x-1">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Salir</span>
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -296,7 +333,7 @@
                         <h3 class="font-bold text-slate-800">Listas de Precios & Reglas de Descuento</h3>
                         <p class="text-xs text-slate-500">Gestión de estructuras tarifarias aplicables a clientes y proveedores en Tryton (`product.price_list`)</p>
                     </div>
-                    <button onclick="openPriceListModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg font-medium shadow-sm transition flex items-center space-x-2">
+                    <button id="btn-new-pricelist" onclick="openPriceListModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg font-medium shadow-sm transition flex items-center space-x-2">
                         <i class="fa-solid fa-plus"></i>
                         <span>Nueva Lista de Precios</span>
                     </button>
@@ -397,7 +434,7 @@
                                 <option value="ALL">Todos</option><option value="green">🟢 Stock OK</option><option value="yellow">🟡 Cerca de reposición</option><option value="red">🔴 Reponer</option>
                             </select>
                         </div>
-                        <button onclick="openProductModal()" class="bg-tryton-accent text-white px-4 py-2 rounded-lg text-sm font-semibold"><i class="fa-solid fa-plus mr-1"></i> Nuevo Producto</button>
+                        <button id="btn-new-product" onclick="openProductModal()" class="bg-tryton-accent text-white px-4 py-2 rounded-lg text-sm font-semibold"><i class="fa-solid fa-plus mr-1"></i> Nuevo Producto</button>
                     </div>
                     <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
