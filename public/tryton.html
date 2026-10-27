@@ -682,73 +682,16 @@
 
     <!-- JAVASCRIPT APPLICATION LOGIC -->
     <script>
-        // DEMO INITIAL DATA STORE
+        // DATA STORE (se carga desde la base de datos)
         let appState = {
-            parties: [
-                { id: 'PARTY-001', name: 'Distribuidora Paraná SRL', cuit: '30-71122334-8', role: 'PROVEEDOR', email: 'ventas@distparana.com.ar', phone: '+54 343 4221100', active: true },
-                { id: 'PARTY-002', name: 'Tech Solutions Argentina', cuit: '30-88990011-2', role: 'CLIENTE', email: 'compras@techsolutions.com', phone: '+54 11 50329900', active: true },
-                { id: 'PARTY-003', name: 'Suministros Industriales SA', cuit: '33-54321098-9', role: 'AMBOS', email: 'contacto@sumindustriales.com', phone: '+54 341 4801122', active: true },
-                { id: 'PARTY-004', name: 'Comercial Santa Fe Norte', cuit: '20-29887766-4', role: 'CLIENTE', email: 'info@santafenorte.com', phone: '+54 342 4556677', active: true }
-            ],
-            priceLists: [
-                { id: 'PL-001', name: 'Precio Base / Minorista', discount: 0, description: 'Precio de lista público sin bonificaciones.' },
-                { id: 'PL-002', name: 'Mayorista (-15%)', discount: 15, description: 'Descuento para distribuidores y compras en volumen.' },
-                { id: 'PL-003', name: 'Cliente VIP (-20%)', discount: 20, description: 'Tarifa preferencial para cuentas corporativas clave.' }
-            ],
-            products: [
-                { id: 'PROD-01', name: 'Servidor Rack 1U Intel Xeon', description: 'Servidor 1U con procesador Intel Xeon, 32GB RAM y discos en RAID 1.', basePrice: 1200000, cost: 850000, stock: 12, reorderPoint: 5 },
-                { id: 'PROD-02', name: 'Switch Gestionable 24 Puertos', description: 'Switch administrable de 24 puertos Gigabit con VLANs y PoE.', basePrice: 350000, cost: 220000, stock: 6, reorderPoint: 5 },
-                { id: 'PROD-03', name: 'Licencia Software Tryton ERP Enterprise', description: 'Licencia anual de Tryton ERP edición Enterprise, por usuario.', basePrice: 250000, cost: 90000, stock: 40, reorderPoint: 10 },
-                { id: 'PROD-04', name: 'Módulo UPS 3000VA Online', description: 'UPS online 3000VA doble conversión con baterías internas.', basePrice: 480000, cost: 310000, stock: 2, reorderPoint: 4 }
-            ],
-            sales: [
-                {
-                    id: 'SO-2026-001',
-                    partyId: 'PARTY-002',
-                    partyName: 'Tech Solutions Argentina',
-                    date: '2026-10-18',
-                    priceListId: 'PL-002',
-                    priceListName: 'Mayorista (-15%)',
-                    subtotal: 1317500,
-                    total: 1317500,
-                    state: 'processing', // draft, confirmed, processing, cancelled
-                    items: [
-                        { productId: 'PROD-01', productName: 'Servidor Rack 1U Intel Xeon', qty: 1, unitPrice: 1020000, lineTotal: 1020000 },
-                        { productId: 'PROD-02', productName: 'Switch Gestionable 24 Puertos', qty: 1, unitPrice: 297500, lineTotal: 297500 }
-                    ]
-                },
-                {
-                    id: 'SO-2026-002',
-                    partyId: 'PARTY-004',
-                    partyName: 'Comercial Santa Fe Norte',
-                    date: '2026-10-21',
-                    priceListId: 'PL-001',
-                    priceListName: 'Precio Base / Minorista',
-                    subtotal: 500000,
-                    total: 500000,
-                    state: 'confirmed',
-                    items: [
-                        { productId: 'PROD-03', productName: 'Licencia Software Tryton ERP Enterprise', qty: 2, unitPrice: 250000, lineTotal: 500000 }
-                    ]
-                }
-            ],
-            purchases: [
-                {
-                    id: 'PO-2026-001',
-                    partyId: 'PARTY-001',
-                    partyName: 'Distribuidora Paraná SRL',
-                    date: '2026-10-15',
-                    subtotal: 960000,
-                    total: 960000,
-                    state: 'processing',
-                    items: [
-                        { productId: 'PROD-04', productName: 'Módulo UPS 3000VA Online', qty: 2, unitPrice: 480000, lineTotal: 960000 }
-                    ]
-                }
-            ]
+            parties: [],
+            priceLists: [],
+            products: [],
+            sales: [],
+            purchases: []
         };
 
-        // CODE SNIPPETS FOR TRYTON DEVELOPER INSPECTOR
+
         const codeSnippets = {
             sale: `# tryton_module/sale.py
 from trytond.model import ModelSQL, ModelView, fields
