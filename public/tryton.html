@@ -785,12 +785,7 @@ xml:
     party.xml`
         };
 
-        // ============ AUTH & ROLES (DEMO) ============
-        const DEMO_USERS = [
-            { username: 'admin', password: 'admin123', name: 'Ana Administradora', role: 'administrador' },
-            { username: 'caja', password: 'caja123', name: 'Carlos Caja', role: 'caja' },
-            { username: 'consulta', password: 'consulta123', name: 'Cecilia Consultas', role: 'consultas' }
-        ];
+        // ============ AUTH, ROLES & DATOS (SUPABASE) ============
         const ROLE_LABELS = { administrador: 'Administrador', caja: 'Caja', consultas: 'Consultas' };
         const ROLE_TABS = {
             administrador: ['dashboard', 'parties', 'pricelists', 'products', 'sales', 'purchases'],
@@ -799,36 +794,94 @@ xml:
         };
         const ROLE_DEFAULT_TAB = { administrador: 'dashboard', caja: 'sales', consultas: 'products' };
         let currentUser = null;
+        let sb = null;
+        let chartsReady = false;
+        let authMode = 'login';
 
         function can(tab) { return currentUser && ROLE_TABS[currentUser.role].includes(tab); }
         function canEditProducts() { return currentUser && currentUser.role === 'administrador'; }
 
-        function login(e) {
+        // La página contenedora envía URL y publishable key (variables de entorno) por postMessage.
+        window.addEventListener('message', (ev) => {
+            if (ev.origin !== window.location.origin) return;
+            const d = ev.data;
+            if (!d || d.type !== 'supabase-config' || sb) return;
+            sb = window.supabase.createClient(d.url, d.publishableKey);
+            initAuth();
+        });
+        if (window.parent !== window) {
+            window.parent.postMessage({ type: 'tryton-ready' }, window.location.origin);
+        }
+
+        async function initAuth() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (session) await onSignedIn(session);
+            sb.auth.onAuthStateChange(async (event, session) => {
+                if (event === 'SIGNED_IN' && session) await onSignedIn(session);
+                if (event === 'SIGNED_OUT') showLogin();
+            });
+        }
+
+        function toggleAuthMode() {
+            authMode = authMode === 'login' ? 'signup' : 'login';
+            document.getElementById('login-submit').innerText = authMode === 'login' ? 'Ingresar' : 'Crear cuenta';
+            document.getElementById('login-toggle').innerText = authMode === 'login' ? '¿No tenés cuenta? Crear una' : '¿Ya tenés cuenta? Ingresar';
+            document.getElementById('login-error').classList.add('hidden');
+            document.getElementById('login-info').classList.add('hidden');
+        }
+
+        async function login(e) {
             e.preventDefault();
-            const u = document.getElementById('login-user').value.trim().toLowerCase();
-            const p = document.getElementById('login-pass').value;
-            const user = DEMO_USERS.find(x => x.username === u && x.password === p);
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-pass').value;
             const err = document.getElementById('login-error');
-            if (!user) { err.classList.remove('hidden'); return; }
-            err.classList.add('hidden');
-            currentUser = user;
+            const info = document.getElementById('login-info');
+            err.classList.add('hidden'); info.classList.add('hidden');
+            if (authMode === 'signup') {
+                const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
+                if (error) { err.innerText = error.message; err.classList.remove('hidden'); return; }
+                if (!data.session) {
+                    info.innerText = 'Cuenta creada. Revisá tu email para confirmarla y después ingresá.';
+                    info.classList.remove('hidden');
+                    return;
+                }
+            } else {
+                const { error } = await sb.auth.signInWithPassword({ email, password });
+                if (error) { err.innerText = 'Email o contraseña incorrectos.'; err.classList.remove('hidden'); return; }
+            }
+        }
+
+        async function onSignedIn(session) {
+            if (currentUser && currentUser.id === session.user.id) return;
+            const { data: roles } = await sb.from('user_roles').select('role').eq('user_id', session.user.id);
+            const role = roles && roles.length ? roles[0].role : 'consultas';
+            currentUser = { id: session.user.id, email: session.user.email, name: session.user.email, role };
             document.getElementById('login-screen').classList.add('hidden');
             const sidebar = document.getElementById('app-sidebar');
             const main = document.getElementById('app-main');
             sidebar.classList.remove('hidden'); sidebar.classList.add('flex');
             main.classList.remove('hidden'); main.classList.add('flex');
+            await loadAll();
             applyRolePermissions();
-            switchTab(ROLE_DEFAULT_TAB[user.role]);
+            renderDashboard(); renderParties(); renderPriceLists(); renderSales(); renderPurchases(); renderProducts();
+            if (!chartsReady) { initCharts(); chartsReady = true; }
+            updateChartsData();
+            switchTab(ROLE_DEFAULT_TAB[role]);
         }
 
-        function logout() {
-            currentUser = null;
-            document.getElementById('login-pass').value = '';
+        function showLogin() {
             document.getElementById('login-screen').classList.remove('hidden');
             const sidebar = document.getElementById('app-sidebar');
             const main = document.getElementById('app-main');
             sidebar.classList.add('hidden'); sidebar.classList.remove('flex');
             main.classList.add('hidden'); main.classList.remove('flex');
+        }
+
+        async function logout() {
+            await sb.auth.signOut();
+            currentUser = null;
+            document.getElementById('login-pass').value = '';
+            showLogin();
         }
 
         function applyRolePermissions() {
@@ -850,17 +903,47 @@ xml:
             renderProducts();
         }
 
-        // DOM LOAD INITIALIZATION
-        window.onload = function() {
-            renderDashboard();
-            renderParties();
-            renderPriceLists();
-            renderSales();
-            renderPurchases();
-            renderProducts();
-            showCodeTab('sale');
-            initCharts();
-        };
+        // ============ CARGA DE DATOS DESDE LA BASE ============
+        async function loadAll() {
+            const [parties, priceLists, products, sales, purchases] = await Promise.all([
+                sb.from('parties').select('*').order('created_at'),
+                sb.from('price_lists').select('*').order('created_at'),
+                sb.from('products').select('*').order('created_at'),
+                sb.from('sales').select('*, sale_lines(*)').order('created_at'),
+                sb.from('purchases').select('*, purchase_lines(*)').order('created_at')
+            ]);
+            appState.parties = (parties.data || []).map(p => ({
+                id: p.code, uuid: p.id, name: p.name, cuit: p.cuit || '', role: p.role,
+                email: p.email || '', phone: p.phone || '', active: p.active
+            }));
+            appState.priceLists = (priceLists.data || []).map(pl => ({
+                id: pl.code, uuid: pl.id, name: pl.name, discount: Number(pl.discount), description: pl.description || ''
+            }));
+            appState.products = (products.data || []).map(p => ({
+                id: p.code, uuid: p.id, name: p.name, type: p.type, description: p.description || '',
+                basePrice: Number(p.base_price), cost: Number(p.cost), stock: p.stock, reorderPoint: p.reorder_point
+            }));
+            const partyName = (uuid) => { const p = appState.parties.find(x => x.uuid === uuid); return p ? p.name : ''; };
+            const plName = (uuid) => { const pl = appState.priceLists.find(x => x.uuid === uuid); return pl ? pl.name : '—'; };
+            const prodName = (uuid) => { const p = appState.products.find(x => x.uuid === uuid); return p ? p.name : ''; };
+            appState.sales = (sales.data || []).map(s => ({
+                id: s.code, uuid: s.id, partyId: s.party_id, partyName: partyName(s.party_id), date: s.date,
+                priceListId: s.price_list_id, priceListName: plName(s.price_list_id),
+                subtotal: Number(s.subtotal), total: Number(s.total), state: s.state,
+                items: (s.sale_lines || []).map(l => ({
+                    productId: l.product_id, productName: prodName(l.product_id),
+                    qty: Number(l.quantity), unitPrice: Number(l.unit_price), lineTotal: Number(l.line_total)
+                }))
+            }));
+            appState.purchases = (purchases.data || []).map(p => ({
+                id: p.code, uuid: p.id, partyId: p.party_id, partyName: partyName(p.party_id), date: p.date,
+                subtotal: Number(p.subtotal), total: Number(p.total), state: p.state,
+                items: (p.purchase_lines || []).map(l => ({
+                    productId: l.product_id, productName: prodName(l.product_id),
+                    qty: Number(l.quantity), unitPrice: Number(l.unit_cost), lineTotal: Number(l.line_total)
+                }))
+            }));
+        }
 
         // NAVIGATION SWITCHER
         function switchTab(tabId) {
