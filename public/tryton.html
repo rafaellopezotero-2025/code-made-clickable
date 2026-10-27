@@ -47,6 +47,7 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 flex h-screen overflow-hidden">
 
@@ -60,20 +61,17 @@
                     <span class="text-xs text-slate-500">Ventas & Compras v7.0 — Acceso de usuarios</span>
                 </div>
             </div>
-            <label class="block text-sm font-medium text-slate-700">Usuario
-                <input id="login-user" required autocomplete="username" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ingrese su usuario">
+            <label class="block text-sm font-medium text-slate-700">Email
+                <input id="login-email" type="email" required autocomplete="username" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="usuario@empresa.com">
             </label>
             <label class="block text-sm font-medium text-slate-700">Contraseña
-                <input id="login-pass" type="password" required autocomplete="current-password" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••">
+                <input id="login-pass" type="password" required minlength="6" autocomplete="current-password" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••">
             </label>
-            <p id="login-error" class="hidden text-xs text-red-600 font-medium">Usuario o contraseña incorrectos.</p>
-            <button type="submit" class="w-full bg-tryton-accent hover:bg-blue-700 text-white font-semibold text-sm py-2.5 rounded-lg shadow transition">Ingresar</button>
-            <div class="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
-                <p class="font-semibold text-slate-600">Usuarios de demostración:</p>
-                <p><b>admin / admin123</b> — Administrador (acceso total)</p>
-                <p><b>caja / caja123</b> — Caja (solo ventas)</p>
-                <p><b>consulta / consulta123</b> — Consultas (productos y precios, solo lectura)</p>
-            </div>
+            <p id="login-error" class="hidden text-xs text-red-600 font-medium"></p>
+            <p id="login-info" class="hidden text-xs text-emerald-700 font-medium"></p>
+            <button type="submit" id="login-submit" class="w-full bg-tryton-accent hover:bg-blue-700 text-white font-semibold text-sm py-2.5 rounded-lg shadow transition">Ingresar</button>
+            <button type="button" id="login-toggle" onclick="toggleAuthMode()" class="w-full text-xs text-blue-600 hover:text-blue-800 font-medium">¿No tenés cuenta? Crear una</button>
+            <p class="text-[11px] text-slate-400 text-center">El primer usuario registrado queda como Administrador; los siguientes entran como Consultas.</p>
         </form>
     </div>
 
@@ -684,73 +682,16 @@
 
     <!-- JAVASCRIPT APPLICATION LOGIC -->
     <script>
-        // DEMO INITIAL DATA STORE
+        // DATA STORE (se carga desde la base de datos)
         let appState = {
-            parties: [
-                { id: 'PARTY-001', name: 'Distribuidora Paraná SRL', cuit: '30-71122334-8', role: 'PROVEEDOR', email: 'ventas@distparana.com.ar', phone: '+54 343 4221100', active: true },
-                { id: 'PARTY-002', name: 'Tech Solutions Argentina', cuit: '30-88990011-2', role: 'CLIENTE', email: 'compras@techsolutions.com', phone: '+54 11 50329900', active: true },
-                { id: 'PARTY-003', name: 'Suministros Industriales SA', cuit: '33-54321098-9', role: 'AMBOS', email: 'contacto@sumindustriales.com', phone: '+54 341 4801122', active: true },
-                { id: 'PARTY-004', name: 'Comercial Santa Fe Norte', cuit: '20-29887766-4', role: 'CLIENTE', email: 'info@santafenorte.com', phone: '+54 342 4556677', active: true }
-            ],
-            priceLists: [
-                { id: 'PL-001', name: 'Precio Base / Minorista', discount: 0, description: 'Precio de lista público sin bonificaciones.' },
-                { id: 'PL-002', name: 'Mayorista (-15%)', discount: 15, description: 'Descuento para distribuidores y compras en volumen.' },
-                { id: 'PL-003', name: 'Cliente VIP (-20%)', discount: 20, description: 'Tarifa preferencial para cuentas corporativas clave.' }
-            ],
-            products: [
-                { id: 'PROD-01', name: 'Servidor Rack 1U Intel Xeon', description: 'Servidor 1U con procesador Intel Xeon, 32GB RAM y discos en RAID 1.', basePrice: 1200000, cost: 850000, stock: 12, reorderPoint: 5 },
-                { id: 'PROD-02', name: 'Switch Gestionable 24 Puertos', description: 'Switch administrable de 24 puertos Gigabit con VLANs y PoE.', basePrice: 350000, cost: 220000, stock: 6, reorderPoint: 5 },
-                { id: 'PROD-03', name: 'Licencia Software Tryton ERP Enterprise', description: 'Licencia anual de Tryton ERP edición Enterprise, por usuario.', basePrice: 250000, cost: 90000, stock: 40, reorderPoint: 10 },
-                { id: 'PROD-04', name: 'Módulo UPS 3000VA Online', description: 'UPS online 3000VA doble conversión con baterías internas.', basePrice: 480000, cost: 310000, stock: 2, reorderPoint: 4 }
-            ],
-            sales: [
-                {
-                    id: 'SO-2026-001',
-                    partyId: 'PARTY-002',
-                    partyName: 'Tech Solutions Argentina',
-                    date: '2026-10-18',
-                    priceListId: 'PL-002',
-                    priceListName: 'Mayorista (-15%)',
-                    subtotal: 1317500,
-                    total: 1317500,
-                    state: 'processing', // draft, confirmed, processing, cancelled
-                    items: [
-                        { productId: 'PROD-01', productName: 'Servidor Rack 1U Intel Xeon', qty: 1, unitPrice: 1020000, lineTotal: 1020000 },
-                        { productId: 'PROD-02', productName: 'Switch Gestionable 24 Puertos', qty: 1, unitPrice: 297500, lineTotal: 297500 }
-                    ]
-                },
-                {
-                    id: 'SO-2026-002',
-                    partyId: 'PARTY-004',
-                    partyName: 'Comercial Santa Fe Norte',
-                    date: '2026-10-21',
-                    priceListId: 'PL-001',
-                    priceListName: 'Precio Base / Minorista',
-                    subtotal: 500000,
-                    total: 500000,
-                    state: 'confirmed',
-                    items: [
-                        { productId: 'PROD-03', productName: 'Licencia Software Tryton ERP Enterprise', qty: 2, unitPrice: 250000, lineTotal: 500000 }
-                    ]
-                }
-            ],
-            purchases: [
-                {
-                    id: 'PO-2026-001',
-                    partyId: 'PARTY-001',
-                    partyName: 'Distribuidora Paraná SRL',
-                    date: '2026-10-15',
-                    subtotal: 960000,
-                    total: 960000,
-                    state: 'processing',
-                    items: [
-                        { productId: 'PROD-04', productName: 'Módulo UPS 3000VA Online', qty: 2, unitPrice: 480000, lineTotal: 960000 }
-                    ]
-                }
-            ]
+            parties: [],
+            priceLists: [],
+            products: [],
+            sales: [],
+            purchases: []
         };
 
-        // CODE SNIPPETS FOR TRYTON DEVELOPER INSPECTOR
+
         const codeSnippets = {
             sale: `# tryton_module/sale.py
 from trytond.model import ModelSQL, ModelView, fields
@@ -844,12 +785,7 @@ xml:
     party.xml`
         };
 
-        // ============ AUTH & ROLES (DEMO) ============
-        const DEMO_USERS = [
-            { username: 'admin', password: 'admin123', name: 'Ana Administradora', role: 'administrador' },
-            { username: 'caja', password: 'caja123', name: 'Carlos Caja', role: 'caja' },
-            { username: 'consulta', password: 'consulta123', name: 'Cecilia Consultas', role: 'consultas' }
-        ];
+        // ============ AUTH, ROLES & DATOS (SUPABASE) ============
         const ROLE_LABELS = { administrador: 'Administrador', caja: 'Caja', consultas: 'Consultas' };
         const ROLE_TABS = {
             administrador: ['dashboard', 'parties', 'pricelists', 'products', 'sales', 'purchases'],
@@ -858,36 +794,94 @@ xml:
         };
         const ROLE_DEFAULT_TAB = { administrador: 'dashboard', caja: 'sales', consultas: 'products' };
         let currentUser = null;
+        let sb = null;
+        let chartsReady = false;
+        let authMode = 'login';
 
         function can(tab) { return currentUser && ROLE_TABS[currentUser.role].includes(tab); }
         function canEditProducts() { return currentUser && currentUser.role === 'administrador'; }
 
-        function login(e) {
+        // La página contenedora envía URL y publishable key (variables de entorno) por postMessage.
+        window.addEventListener('message', (ev) => {
+            if (ev.origin !== window.location.origin) return;
+            const d = ev.data;
+            if (!d || d.type !== 'supabase-config' || sb) return;
+            sb = window.supabase.createClient(d.url, d.publishableKey);
+            initAuth();
+        });
+        if (window.parent !== window) {
+            window.parent.postMessage({ type: 'tryton-ready' }, window.location.origin);
+        }
+
+        async function initAuth() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (session) await onSignedIn(session);
+            sb.auth.onAuthStateChange(async (event, session) => {
+                if (event === 'SIGNED_IN' && session) await onSignedIn(session);
+                if (event === 'SIGNED_OUT') showLogin();
+            });
+        }
+
+        function toggleAuthMode() {
+            authMode = authMode === 'login' ? 'signup' : 'login';
+            document.getElementById('login-submit').innerText = authMode === 'login' ? 'Ingresar' : 'Crear cuenta';
+            document.getElementById('login-toggle').innerText = authMode === 'login' ? '¿No tenés cuenta? Crear una' : '¿Ya tenés cuenta? Ingresar';
+            document.getElementById('login-error').classList.add('hidden');
+            document.getElementById('login-info').classList.add('hidden');
+        }
+
+        async function login(e) {
             e.preventDefault();
-            const u = document.getElementById('login-user').value.trim().toLowerCase();
-            const p = document.getElementById('login-pass').value;
-            const user = DEMO_USERS.find(x => x.username === u && x.password === p);
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-pass').value;
             const err = document.getElementById('login-error');
-            if (!user) { err.classList.remove('hidden'); return; }
-            err.classList.add('hidden');
-            currentUser = user;
+            const info = document.getElementById('login-info');
+            err.classList.add('hidden'); info.classList.add('hidden');
+            if (authMode === 'signup') {
+                const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
+                if (error) { err.innerText = error.message; err.classList.remove('hidden'); return; }
+                if (!data.session) {
+                    info.innerText = 'Cuenta creada. Revisá tu email para confirmarla y después ingresá.';
+                    info.classList.remove('hidden');
+                    return;
+                }
+            } else {
+                const { error } = await sb.auth.signInWithPassword({ email, password });
+                if (error) { err.innerText = 'Email o contraseña incorrectos.'; err.classList.remove('hidden'); return; }
+            }
+        }
+
+        async function onSignedIn(session) {
+            if (currentUser && currentUser.id === session.user.id) return;
+            const { data: roles } = await sb.from('user_roles').select('role').eq('user_id', session.user.id);
+            const role = roles && roles.length ? roles[0].role : 'consultas';
+            currentUser = { id: session.user.id, email: session.user.email, name: session.user.email, role };
             document.getElementById('login-screen').classList.add('hidden');
             const sidebar = document.getElementById('app-sidebar');
             const main = document.getElementById('app-main');
             sidebar.classList.remove('hidden'); sidebar.classList.add('flex');
             main.classList.remove('hidden'); main.classList.add('flex');
+            await loadAll();
             applyRolePermissions();
-            switchTab(ROLE_DEFAULT_TAB[user.role]);
+            renderDashboard(); renderParties(); renderPriceLists(); renderSales(); renderPurchases(); renderProducts();
+            if (!chartsReady) { initCharts(); chartsReady = true; }
+            updateChartsData();
+            switchTab(ROLE_DEFAULT_TAB[role]);
         }
 
-        function logout() {
-            currentUser = null;
-            document.getElementById('login-pass').value = '';
+        function showLogin() {
             document.getElementById('login-screen').classList.remove('hidden');
             const sidebar = document.getElementById('app-sidebar');
             const main = document.getElementById('app-main');
             sidebar.classList.add('hidden'); sidebar.classList.remove('flex');
             main.classList.add('hidden'); main.classList.remove('flex');
+        }
+
+        async function logout() {
+            await sb.auth.signOut();
+            currentUser = null;
+            document.getElementById('login-pass').value = '';
+            showLogin();
         }
 
         function applyRolePermissions() {
@@ -909,17 +903,47 @@ xml:
             renderProducts();
         }
 
-        // DOM LOAD INITIALIZATION
-        window.onload = function() {
-            renderDashboard();
-            renderParties();
-            renderPriceLists();
-            renderSales();
-            renderPurchases();
-            renderProducts();
-            showCodeTab('sale');
-            initCharts();
-        };
+        // ============ CARGA DE DATOS DESDE LA BASE ============
+        async function loadAll() {
+            const [parties, priceLists, products, sales, purchases] = await Promise.all([
+                sb.from('parties').select('*').order('created_at'),
+                sb.from('price_lists').select('*').order('created_at'),
+                sb.from('products').select('*').order('created_at'),
+                sb.from('sales').select('*, sale_lines(*)').order('created_at'),
+                sb.from('purchases').select('*, purchase_lines(*)').order('created_at')
+            ]);
+            appState.parties = (parties.data || []).map(p => ({
+                id: p.code, uuid: p.id, name: p.name, cuit: p.cuit || '', role: p.role,
+                email: p.email || '', phone: p.phone || '', active: p.active
+            }));
+            appState.priceLists = (priceLists.data || []).map(pl => ({
+                id: pl.code, uuid: pl.id, name: pl.name, discount: Number(pl.discount), description: pl.description || ''
+            }));
+            appState.products = (products.data || []).map(p => ({
+                id: p.code, uuid: p.id, name: p.name, type: p.type, description: p.description || '',
+                basePrice: Number(p.base_price), cost: Number(p.cost), stock: p.stock, reorderPoint: p.reorder_point
+            }));
+            const partyName = (uuid) => { const p = appState.parties.find(x => x.uuid === uuid); return p ? p.name : ''; };
+            const plName = (uuid) => { const pl = appState.priceLists.find(x => x.uuid === uuid); return pl ? pl.name : '—'; };
+            const prodName = (uuid) => { const p = appState.products.find(x => x.uuid === uuid); return p ? p.name : ''; };
+            appState.sales = (sales.data || []).map(s => ({
+                id: s.code, uuid: s.id, partyId: s.party_id, partyName: partyName(s.party_id), date: s.date,
+                priceListId: s.price_list_id, priceListName: plName(s.price_list_id),
+                subtotal: Number(s.subtotal), total: Number(s.total), state: s.state,
+                items: (s.sale_lines || []).map(l => ({
+                    productId: l.product_id, productName: prodName(l.product_id),
+                    qty: Number(l.quantity), unitPrice: Number(l.unit_price), lineTotal: Number(l.line_total)
+                }))
+            }));
+            appState.purchases = (purchases.data || []).map(p => ({
+                id: p.code, uuid: p.id, partyId: p.party_id, partyName: partyName(p.party_id), date: p.date,
+                subtotal: Number(p.subtotal), total: Number(p.total), state: p.state,
+                items: (p.purchase_lines || []).map(l => ({
+                    productId: l.product_id, productName: prodName(l.product_id),
+                    qty: Number(l.quantity), unitPrice: Number(l.unit_cost), lineTotal: Number(l.line_total)
+                }))
+            }));
+        }
 
         // NAVIGATION SWITCHER
         function switchTab(tabId) {
@@ -955,15 +979,40 @@ xml:
         let salesVsPurchaseChartInstance = null;
         let partyDistributionChartInstance = null;
 
+        function last6Months() {
+            const out = [];
+            const now = new Date();
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                out.push({ y: d.getFullYear(), m: d.getMonth(), label: d.toLocaleString('es-AR', { month: 'long' }) });
+            }
+            return out;
+        }
+
+        function monthlyData(list) {
+            return last6Months().map(mm => list.filter(x => {
+                if (x.state === 'cancelled') return false;
+                const d = new Date(x.date + 'T00:00:00');
+                return d.getFullYear() === mm.y && d.getMonth() === mm.m;
+            }).reduce((a, x) => a + x.total, 0));
+        }
+
+        function updateSalesChart() {
+            if (!salesVsPurchaseChartInstance) return;
+            salesVsPurchaseChartInstance.data.datasets[0].data = monthlyData(appState.sales);
+            salesVsPurchaseChartInstance.data.datasets[1].data = monthlyData(appState.purchases);
+            salesVsPurchaseChartInstance.update();
+        }
+
         function initCharts() {
             const ctx1 = document.getElementById('salesVsPurchaseChart').getContext('2d');
             salesVsPurchaseChartInstance = new Chart(ctx1, {
                 type: 'bar',
                 data: {
-                    labels: ['Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre'],
+                    labels: last6Months().map(l => l.label),
                     datasets: [
-                        { label: 'Ventas ($)', data: [1200000, 1900000, 1500000, 2200000, 1800000, 2199175], backgroundColor: '#2563eb' },
-                        { label: 'Compras ($)', data: [800000, 1100000, 950000, 1400000, 1000000, 1161600], backgroundColor: '#d97706' }
+                        { label: 'Ventas ($)', data: monthlyData(appState.sales), backgroundColor: '#2563eb' },
+                        { label: 'Compras ($)', data: monthlyData(appState.purchases), backgroundColor: '#d97706' }
                     ]
                 },
                 options: { responsive: true, maintainAspectRatio: false }
@@ -1001,6 +1050,7 @@ xml:
             document.getElementById('kpi-sales-total').innerText = `$${salesTotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
             document.getElementById('kpi-purchases-total').innerText = `$${purchasesTotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
             document.getElementById('kpi-parties-count').innerText = appState.parties.length;
+            updateSalesChart();
 
             // Render Recent Table
             const recentContainer = document.getElementById('dashboard-recent-table');
@@ -1063,20 +1113,21 @@ xml:
         function openPartyModal() { if (currentUser && currentUser.role !== 'administrador') return; document.getElementById('party-modal').classList.remove('hidden'); }
         function closePartyModal() { document.getElementById('party-modal').classList.add('hidden'); }
         
-        function saveParty(e) {
+        async function saveParty(e) {
             e.preventDefault();
-            const newParty = {
-                id: `PARTY-00${appState.parties.length + 1}`,
+            const code = `PARTY-${String(appState.parties.length + 1).padStart(3, '0')}`;
+            const { error } = await sb.from('parties').insert({
+                code,
                 name: document.getElementById('party-name').value,
                 cuit: document.getElementById('party-cuit').value,
                 role: document.getElementById('party-role').value,
                 email: document.getElementById('party-email').value,
-                phone: document.getElementById('party-phone').value,
-                active: true
-            };
-            appState.parties.push(newParty);
+                phone: document.getElementById('party-phone').value
+            });
+            if (error) { alert('Error al guardar el tercero: ' + error.message); return; }
             closePartyModal();
             document.getElementById('party-form').reset();
+            await loadAll();
             renderParties();
             renderDashboard();
         }
@@ -1108,22 +1159,24 @@ xml:
         function openPriceListModal() { if (currentUser && currentUser.role !== 'administrador') return; document.getElementById('pricelist-modal').classList.remove('hidden'); }
         function closePriceListModal() { document.getElementById('pricelist-modal').classList.add('hidden'); }
 
-        function savePriceList(e) {
+        async function savePriceList(e) {
             e.preventDefault();
-            const newPL = {
-                id: `PL-00${appState.priceLists.length + 1}`,
+            const code = `PL-${String(appState.priceLists.length + 1).padStart(3, '0')}`;
+            const { error } = await sb.from('price_lists').insert({
+                code,
                 name: document.getElementById('pricelist-name').value,
                 discount: parseFloat(document.getElementById('pricelist-discount').value) || 0,
                 description: document.getElementById('pricelist-desc').value
-            };
-            appState.priceLists.push(newPL);
+            });
+            if (error) { alert('Error al guardar la lista: ' + error.message); return; }
             closePriceListModal();
             document.getElementById('pricelist-form').reset();
+            await loadAll();
             renderPriceLists();
         }
 
         function getProductDescription(productId) {
-            const prod = appState.products.find(p => p.id === productId);
+            const prod = appState.products.find(p => p.uuid === productId);
             return (prod && prod.description) ? prod.description : 'Sin descripción';
         }
 
@@ -1164,9 +1217,9 @@ xml:
                     <td class="p-3.5 text-right font-bold text-slate-800">$${s.total.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
                     <td class="p-3.5 text-center">${getStateBadge(s.state)}</td>
                     <td class="p-3.5 text-center space-x-1">
-                        ${s.state === 'draft' ? `<button onclick="changeSaleState('${s.id}', 'confirmed')" class="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">Confirmar</button>` : ''}
-                        ${s.state === 'confirmed' ? `<button onclick="changeSaleState('${s.id}', 'processing')" class="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700">Procesar</button>` : ''}
-                        ${s.state !== 'cancelled' && s.state !== 'processing' ? `<button onclick="changeSaleState('${s.id}', 'cancelled')" class="px-2 py-1 bg-slate-200 text-slate-600 text-xs rounded hover:bg-slate-300">Cancelar</button>` : ''}
+                        ${s.state === 'draft' ? `<button onclick="changeSaleState('${s.uuid}', 'confirmed')" class="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">Confirmar</button>` : ''}
+                        ${s.state === 'confirmed' ? `<button onclick="changeSaleState('${s.uuid}', 'processing')" class="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700">Procesar</button>` : ''}
+                        ${s.state !== 'cancelled' && s.state !== 'processing' ? `<button onclick="changeSaleState('${s.uuid}', 'cancelled')" class="px-2 py-1 bg-slate-200 text-slate-600 text-xs rounded hover:bg-slate-300">Cancelar</button>` : ''}
                     </td>
                 `;
                 container.appendChild(tr);
@@ -1193,27 +1246,31 @@ xml:
             });
         }
 
-        function changeSaleState(saleId, newState) {
-            const sale = appState.sales.find(s => s.id === saleId);
-            if(sale) {
-                sale.state = newState;
-                if (newState === 'confirmed' && !sale.stockApplied) { sale.stockApplied = true; applyStockMovement(sale.items, -1); }
-                renderSales();
-                renderDashboard();
-            }
+        async function changeSaleState(saleUuid, newState) {
+            const sale = appState.sales.find(s => s.uuid === saleUuid);
+            if (!sale) return;
+            const { error } = await sb.from('sales').update({ state: newState }).eq('id', saleUuid);
+            if (error) { alert('Error al cambiar el estado: ' + error.message); return; }
+            if (newState === 'confirmed' && sale.state === 'draft') await applyStockMovement(sale.items, -1);
+            if (newState === 'cancelled' && (sale.state === 'confirmed' || sale.state === 'processing')) await applyStockMovement(sale.items, 1);
+            await loadAll();
+            renderSales();
+            renderDashboard();
         }
 
         let tempSaleLines = [];
 
         function openSaleModal() {
             if (currentUser && !can('sales')) return;
+            if (!appState.products.length) { alert('Primero cargá al menos un producto.'); return; }
+            if (!appState.parties.some(p => p.role === 'CLIENTE' || p.role === 'AMBOS')) { alert('Primero cargá al menos un cliente.'); return; }
             const partySelect = document.getElementById('sale-party');
-            partySelect.innerHTML = appState.parties.filter(p => p.role === 'CLIENTE' || p.role === 'AMBOS').map(p => `<option value="${p.id}">${p.name} (${p.cuit})</option>`).join('');
+            partySelect.innerHTML = appState.parties.filter(p => p.role === 'CLIENTE' || p.role === 'AMBOS').map(p => `<option value="${p.uuid}">${p.name} (${p.cuit})</option>`).join('');
 
             const plSelect = document.getElementById('sale-pricelist');
-            plSelect.innerHTML = appState.priceLists.map(pl => `<option value="${pl.id}">${pl.name}</option>`).join('');
+            plSelect.innerHTML = appState.priceLists.map(pl => `<option value="${pl.uuid}">${pl.name}</option>`).join('');
 
-            tempSaleLines = [{ productId: appState.products[0].id, qty: 1 }];
+            tempSaleLines = [{ productId: appState.products[0].uuid, qty: 1 }];
             renderSaleLines();
             document.getElementById('sale-modal').classList.remove('hidden');
         }
@@ -1221,7 +1278,7 @@ xml:
         function closeSaleModal() { document.getElementById('sale-modal').classList.add('hidden'); }
 
         function addSaleLineItem() {
-            tempSaleLines.push({ productId: appState.products[0].id, qty: 1 });
+            tempSaleLines.push({ productId: appState.products[0].uuid, qty: 1 });
             renderSaleLines();
         }
 
