@@ -979,15 +979,40 @@ xml:
         let salesVsPurchaseChartInstance = null;
         let partyDistributionChartInstance = null;
 
+        function last6Months() {
+            const out = [];
+            const now = new Date();
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                out.push({ y: d.getFullYear(), m: d.getMonth(), label: d.toLocaleString('es-AR', { month: 'long' }) });
+            }
+            return out;
+        }
+
+        function monthlyData(list) {
+            return last6Months().map(mm => list.filter(x => {
+                if (x.state === 'cancelled') return false;
+                const d = new Date(x.date + 'T00:00:00');
+                return d.getFullYear() === mm.y && d.getMonth() === mm.m;
+            }).reduce((a, x) => a + x.total, 0));
+        }
+
+        function updateSalesChart() {
+            if (!salesVsPurchaseChartInstance) return;
+            salesVsPurchaseChartInstance.data.datasets[0].data = monthlyData(appState.sales);
+            salesVsPurchaseChartInstance.data.datasets[1].data = monthlyData(appState.purchases);
+            salesVsPurchaseChartInstance.update();
+        }
+
         function initCharts() {
             const ctx1 = document.getElementById('salesVsPurchaseChart').getContext('2d');
             salesVsPurchaseChartInstance = new Chart(ctx1, {
                 type: 'bar',
                 data: {
-                    labels: ['Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre'],
+                    labels: last6Months().map(l => l.label),
                     datasets: [
-                        { label: 'Ventas ($)', data: [1200000, 1900000, 1500000, 2200000, 1800000, 2199175], backgroundColor: '#2563eb' },
-                        { label: 'Compras ($)', data: [800000, 1100000, 950000, 1400000, 1000000, 1161600], backgroundColor: '#d97706' }
+                        { label: 'Ventas ($)', data: monthlyData(appState.sales), backgroundColor: '#2563eb' },
+                        { label: 'Compras ($)', data: monthlyData(appState.purchases), backgroundColor: '#d97706' }
                     ]
                 },
                 options: { responsive: true, maintainAspectRatio: false }
@@ -1025,6 +1050,7 @@ xml:
             document.getElementById('kpi-sales-total').innerText = `$${salesTotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
             document.getElementById('kpi-purchases-total').innerText = `$${purchasesTotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
             document.getElementById('kpi-parties-count').innerText = appState.parties.length;
+            updateSalesChart();
 
             // Render Recent Table
             const recentContainer = document.getElementById('dashboard-recent-table');
@@ -1087,20 +1113,21 @@ xml:
         function openPartyModal() { if (currentUser && currentUser.role !== 'administrador') return; document.getElementById('party-modal').classList.remove('hidden'); }
         function closePartyModal() { document.getElementById('party-modal').classList.add('hidden'); }
         
-        function saveParty(e) {
+        async function saveParty(e) {
             e.preventDefault();
-            const newParty = {
-                id: `PARTY-00${appState.parties.length + 1}`,
+            const code = `PARTY-${String(appState.parties.length + 1).padStart(3, '0')}`;
+            const { error } = await sb.from('parties').insert({
+                code,
                 name: document.getElementById('party-name').value,
                 cuit: document.getElementById('party-cuit').value,
                 role: document.getElementById('party-role').value,
                 email: document.getElementById('party-email').value,
-                phone: document.getElementById('party-phone').value,
-                active: true
-            };
-            appState.parties.push(newParty);
+                phone: document.getElementById('party-phone').value
+            });
+            if (error) { alert('Error al guardar el tercero: ' + error.message); return; }
             closePartyModal();
             document.getElementById('party-form').reset();
+            await loadAll();
             renderParties();
             renderDashboard();
         }
@@ -1132,22 +1159,24 @@ xml:
         function openPriceListModal() { if (currentUser && currentUser.role !== 'administrador') return; document.getElementById('pricelist-modal').classList.remove('hidden'); }
         function closePriceListModal() { document.getElementById('pricelist-modal').classList.add('hidden'); }
 
-        function savePriceList(e) {
+        async function savePriceList(e) {
             e.preventDefault();
-            const newPL = {
-                id: `PL-00${appState.priceLists.length + 1}`,
+            const code = `PL-${String(appState.priceLists.length + 1).padStart(3, '0')}`;
+            const { error } = await sb.from('price_lists').insert({
+                code,
                 name: document.getElementById('pricelist-name').value,
                 discount: parseFloat(document.getElementById('pricelist-discount').value) || 0,
                 description: document.getElementById('pricelist-desc').value
-            };
-            appState.priceLists.push(newPL);
+            });
+            if (error) { alert('Error al guardar la lista: ' + error.message); return; }
             closePriceListModal();
             document.getElementById('pricelist-form').reset();
+            await loadAll();
             renderPriceLists();
         }
 
         function getProductDescription(productId) {
-            const prod = appState.products.find(p => p.id === productId);
+            const prod = appState.products.find(p => p.uuid === productId);
             return (prod && prod.description) ? prod.description : 'Sin descripción';
         }
 
