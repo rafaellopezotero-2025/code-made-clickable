@@ -1217,9 +1217,9 @@ xml:
                     <td class="p-3.5 text-right font-bold text-slate-800">$${s.total.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
                     <td class="p-3.5 text-center">${getStateBadge(s.state)}</td>
                     <td class="p-3.5 text-center space-x-1">
-                        ${s.state === 'draft' ? `<button onclick="changeSaleState('${s.id}', 'confirmed')" class="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">Confirmar</button>` : ''}
-                        ${s.state === 'confirmed' ? `<button onclick="changeSaleState('${s.id}', 'processing')" class="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700">Procesar</button>` : ''}
-                        ${s.state !== 'cancelled' && s.state !== 'processing' ? `<button onclick="changeSaleState('${s.id}', 'cancelled')" class="px-2 py-1 bg-slate-200 text-slate-600 text-xs rounded hover:bg-slate-300">Cancelar</button>` : ''}
+                        ${s.state === 'draft' ? `<button onclick="changeSaleState('${s.uuid}', 'confirmed')" class="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">Confirmar</button>` : ''}
+                        ${s.state === 'confirmed' ? `<button onclick="changeSaleState('${s.uuid}', 'processing')" class="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700">Procesar</button>` : ''}
+                        ${s.state !== 'cancelled' && s.state !== 'processing' ? `<button onclick="changeSaleState('${s.uuid}', 'cancelled')" class="px-2 py-1 bg-slate-200 text-slate-600 text-xs rounded hover:bg-slate-300">Cancelar</button>` : ''}
                     </td>
                 `;
                 container.appendChild(tr);
@@ -1246,27 +1246,31 @@ xml:
             });
         }
 
-        function changeSaleState(saleId, newState) {
-            const sale = appState.sales.find(s => s.id === saleId);
-            if(sale) {
-                sale.state = newState;
-                if (newState === 'confirmed' && !sale.stockApplied) { sale.stockApplied = true; applyStockMovement(sale.items, -1); }
-                renderSales();
-                renderDashboard();
-            }
+        async function changeSaleState(saleUuid, newState) {
+            const sale = appState.sales.find(s => s.uuid === saleUuid);
+            if (!sale) return;
+            const { error } = await sb.from('sales').update({ state: newState }).eq('id', saleUuid);
+            if (error) { alert('Error al cambiar el estado: ' + error.message); return; }
+            if (newState === 'confirmed' && sale.state === 'draft') await applyStockMovement(sale.items, -1);
+            if (newState === 'cancelled' && (sale.state === 'confirmed' || sale.state === 'processing')) await applyStockMovement(sale.items, 1);
+            await loadAll();
+            renderSales();
+            renderDashboard();
         }
 
         let tempSaleLines = [];
 
         function openSaleModal() {
             if (currentUser && !can('sales')) return;
+            if (!appState.products.length) { alert('Primero cargá al menos un producto.'); return; }
+            if (!appState.parties.some(p => p.role === 'CLIENTE' || p.role === 'AMBOS')) { alert('Primero cargá al menos un cliente.'); return; }
             const partySelect = document.getElementById('sale-party');
-            partySelect.innerHTML = appState.parties.filter(p => p.role === 'CLIENTE' || p.role === 'AMBOS').map(p => `<option value="${p.id}">${p.name} (${p.cuit})</option>`).join('');
+            partySelect.innerHTML = appState.parties.filter(p => p.role === 'CLIENTE' || p.role === 'AMBOS').map(p => `<option value="${p.uuid}">${p.name} (${p.cuit})</option>`).join('');
 
             const plSelect = document.getElementById('sale-pricelist');
-            plSelect.innerHTML = appState.priceLists.map(pl => `<option value="${pl.id}">${pl.name}</option>`).join('');
+            plSelect.innerHTML = appState.priceLists.map(pl => `<option value="${pl.uuid}">${pl.name}</option>`).join('');
 
-            tempSaleLines = [{ productId: appState.products[0].id, qty: 1 }];
+            tempSaleLines = [{ productId: appState.products[0].uuid, qty: 1 }];
             renderSaleLines();
             document.getElementById('sale-modal').classList.remove('hidden');
         }
@@ -1274,7 +1278,7 @@ xml:
         function closeSaleModal() { document.getElementById('sale-modal').classList.add('hidden'); }
 
         function addSaleLineItem() {
-            tempSaleLines.push({ productId: appState.products[0].id, qty: 1 });
+            tempSaleLines.push({ productId: appState.products[0].uuid, qty: 1 });
             renderSaleLines();
         }
 
