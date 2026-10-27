@@ -47,6 +47,7 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 flex h-screen overflow-hidden">
 
@@ -60,20 +61,17 @@
                     <span class="text-xs text-slate-500">Ventas & Compras v7.0 — Acceso de usuarios</span>
                 </div>
             </div>
-            <label class="block text-sm font-medium text-slate-700">Usuario
-                <input id="login-user" required autocomplete="username" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ingrese su usuario">
+            <label class="block text-sm font-medium text-slate-700">Email
+                <input id="login-email" type="email" required autocomplete="username" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="usuario@empresa.com">
             </label>
             <label class="block text-sm font-medium text-slate-700">Contraseña
-                <input id="login-pass" type="password" required autocomplete="current-password" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••">
+                <input id="login-pass" type="password" required minlength="6" autocomplete="current-password" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••">
             </label>
-            <p id="login-error" class="hidden text-xs text-red-600 font-medium">Usuario o contraseña incorrectos.</p>
-            <button type="submit" class="w-full bg-tryton-accent hover:bg-blue-700 text-white font-semibold text-sm py-2.5 rounded-lg shadow transition">Ingresar</button>
-            <div class="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
-                <p class="font-semibold text-slate-600">Usuarios de demostración:</p>
-                <p><b>admin / admin123</b> — Administrador (acceso total)</p>
-                <p><b>caja / caja123</b> — Caja (solo ventas)</p>
-                <p><b>consulta / consulta123</b> — Consultas (productos y precios, solo lectura)</p>
-            </div>
+            <p id="login-error" class="hidden text-xs text-red-600 font-medium"></p>
+            <p id="login-info" class="hidden text-xs text-emerald-700 font-medium"></p>
+            <button type="submit" id="login-submit" class="w-full bg-tryton-accent hover:bg-blue-700 text-white font-semibold text-sm py-2.5 rounded-lg shadow transition">Ingresar</button>
+            <button type="button" id="login-toggle" onclick="toggleAuthMode()" class="w-full text-xs text-blue-600 hover:text-blue-800 font-medium">¿No tenés cuenta? Crear una</button>
+            <p class="text-[11px] text-slate-400 text-center">El primer usuario registrado queda como Administrador; los siguientes entran como Consultas.</p>
         </form>
     </div>
 
