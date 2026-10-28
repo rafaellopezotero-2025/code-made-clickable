@@ -1432,24 +1432,28 @@ xml:
             });
         }
 
-        function changePurchaseState(purchaseId, newState) {
-            const purchase = appState.purchases.find(p => p.id === purchaseId);
-            if(purchase) {
-                purchase.state = newState;
-                if (newState === 'confirmed' && !purchase.stockApplied) { purchase.stockApplied = true; applyStockMovement(purchase.items, 1); }
-                renderPurchases();
-                renderDashboard();
-            }
+        async function changePurchaseState(purchaseUuid, newState) {
+            const purchase = appState.purchases.find(p => p.uuid === purchaseUuid);
+            if (!purchase) return;
+            const { error } = await sb.from('purchases').update({ state: newState }).eq('id', purchaseUuid);
+            if (error) { alert('Error al cambiar el estado: ' + error.message); return; }
+            if (newState === 'confirmed' && purchase.state === 'draft') await applyStockMovement(purchase.items, 1);
+            if (newState === 'cancelled' && (purchase.state === 'confirmed' || purchase.state === 'processing')) await applyStockMovement(purchase.items, -1);
+            await loadAll();
+            renderPurchases();
+            renderDashboard();
         }
 
         let tempPurchaseLines = [];
 
         function openPurchaseModal() {
             if (currentUser && !can('purchases')) return;
+            if (!appState.products.length) { alert('Primero cargá al menos un producto.'); return; }
+            if (!appState.parties.some(p => p.role === 'PROVEEDOR' || p.role === 'AMBOS')) { alert('Primero cargá al menos un proveedor.'); return; }
             const partySelect = document.getElementById('purchase-party');
-            partySelect.innerHTML = appState.parties.filter(p => p.role === 'PROVEEDOR' || p.role === 'AMBOS').map(p => `<option value="${p.id}">${p.name} (${p.cuit})</option>`).join('');
+            partySelect.innerHTML = appState.parties.filter(p => p.role === 'PROVEEDOR' || p.role === 'AMBOS').map(p => `<option value="${p.uuid}">${p.name} (${p.cuit})</option>`).join('');
 
-            tempPurchaseLines = [{ productId: appState.products[0].id, qty: 1 }];
+            tempPurchaseLines = [{ productId: appState.products[0].uuid, qty: 1 }];
             renderPurchaseLines();
             document.getElementById('purchase-modal').classList.remove('hidden');
         }
@@ -1457,7 +1461,7 @@ xml:
         function closePurchaseModal() { document.getElementById('purchase-modal').classList.add('hidden'); }
 
         function addPurchaseLineItem() {
-            tempPurchaseLines.push({ productId: appState.products[0].id, qty: 1 });
+            tempPurchaseLines.push({ productId: appState.products[0].uuid, qty: 1 });
             renderPurchaseLines();
         }
 
@@ -1476,7 +1480,7 @@ xml:
                 div.innerHTML = `
                     <div class="flex items-center space-x-3">
                         <select onchange="tempPurchaseLines[${idx}].productId = this.value; calculatePurchaseTotals(); updatePurchaseLineDesc(${idx});" class="flex-1 border border-slate-300 rounded px-2 py-1 text-xs">
-                            ${appState.products.map(p => `<option value="${p.id}" ${p.id === line.productId ? 'selected' : ''}>${p.name} ($${p.basePrice.toLocaleString()})</option>`).join('')}
+                            ${appState.products.map(p => `<option value="${p.uuid}" ${p.uuid === line.productId ? 'selected' : ''}>${p.name} ($${p.basePrice.toLocaleString()})</option>`).join('')}
                         </select>
                         <input type="number" min="1" value="${line.qty}" onchange="tempPurchaseLines[${idx}].qty = parseInt(this.value) || 1; calculatePurchaseTotals();" class="w-16 border border-slate-300 rounded px-2 py-1 text-xs text-center">
                         <button type="button" onclick="removePurchaseLineItem(${idx})" class="text-red-500 hover:text-red-700 px-2"><i class="fa-solid fa-trash"></i></button>
