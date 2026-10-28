@@ -1297,7 +1297,7 @@ xml:
                 div.innerHTML = `
                     <div class="flex items-center space-x-3">
                         <select onchange="tempSaleLines[${idx}].productId = this.value; calculateSaleTotals(); updateSaleLineDesc(${idx});" class="flex-1 border border-slate-300 rounded px-2 py-1 text-xs">
-                            ${appState.products.map(p => `<option value="${p.id}" ${p.id === line.productId ? 'selected' : ''}>${p.name} ($${p.basePrice.toLocaleString()})</option>`).join('')}
+                            ${appState.products.map(p => `<option value="${p.uuid}" ${p.uuid === line.productId ? 'selected' : ''}>${p.name} ($${p.basePrice.toLocaleString()})</option>`).join('')}
                         </select>
                         <input type="number" min="1" value="${line.qty}" onchange="tempSaleLines[${idx}].qty = parseInt(this.value) || 1; calculateSaleTotals();" class="w-16 border border-slate-300 rounded px-2 py-1 text-xs text-center">
                         <button type="button" onclick="removeSaleLineItem(${idx})" class="text-red-500 hover:text-red-700 px-2"><i class="fa-solid fa-trash"></i></button>
@@ -1315,13 +1315,13 @@ xml:
         }
 
         function calculateSaleTotals() {
-            const plId = document.getElementById('sale-pricelist')?.value || appState.priceLists[0].id;
-            const priceList = appState.priceLists.find(pl => pl.id === plId);
+            const plId = document.getElementById('sale-pricelist')?.value || appState.priceLists[0].uuid;
+            const priceList = appState.priceLists.find(pl => pl.uuid === plId);
             const discountFactor = 1 - (priceList.discount / 100);
 
             let subtotal = 0;
             tempSaleLines.forEach(line => {
-                const prod = appState.products.find(p => p.id === line.productId);
+                const prod = appState.products.find(p => p.uuid === line.productId);
                 if(prod) {
                     subtotal += (prod.basePrice * discountFactor) * line.qty;
                 }
@@ -1333,39 +1333,47 @@ xml:
             document.getElementById('sale-total-display').innerText = `$${total.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
         }
 
-        function saveSale(e) {
+        async function saveSale(e) {
             e.preventDefault();
             const partyId = document.getElementById('sale-party').value;
-            const party = appState.parties.find(p => p.id === partyId);
             const plId = document.getElementById('sale-pricelist').value;
-            const priceList = appState.priceLists.find(pl => pl.id === plId);
+            const priceList = appState.priceLists.find(pl => pl.uuid === plId);
             const discountFactor = 1 - (priceList.discount / 100);
 
             let subtotal = 0;
             const items = tempSaleLines.map(line => {
-                const prod = appState.products.find(p => p.id === line.productId);
+                const prod = appState.products.find(p => p.uuid === line.productId);
                 const unitPrice = prod.basePrice * discountFactor;
                 const lineTotal = unitPrice * line.qty;
                 subtotal += lineTotal;
-                return { productId: prod.id, productName: prod.name, qty: line.qty, unitPrice, lineTotal };
+                return { productId: prod.uuid, productName: prod.name, qty: line.qty, unitPrice, lineTotal };
             });
 
             const total = subtotal;
+            const code = `SO-2026-${String(appState.sales.length + 1).padStart(3, '0')}`;
 
-            const newSale = {
-                id: `SO-2026-00${appState.sales.length + 1}`,
-                partyId: party.id,
-                partyName: party.name,
+            const { data: sale, error } = await sb.from('sales').insert({
+                code,
+                party_id: partyId,
+                price_list_id: plId,
                 date: new Date().toISOString().split('T')[0],
-                priceListId: priceList.id,
-                priceListName: priceList.name,
                 subtotal, total,
                 state: 'draft',
-                items
-            };
+                created_by: currentUser.id
+            }).select().single();
+            if (error) { alert('Error al guardar la venta: ' + error.message); return; }
 
-            appState.sales.push(newSale);
+            const { error: linesError } = await sb.from('sale_lines').insert(items.map(it => ({
+                sale_id: sale.id,
+                product_id: it.productId,
+                quantity: it.qty,
+                unit_price: it.unitPrice,
+                line_total: it.lineTotal
+            })));
+            if (linesError) { alert('Error al guardar las líneas: ' + linesError.message); return; }
+
             closeSaleModal();
+            await loadAll();
             renderSales();
             renderDashboard();
         }
@@ -1395,9 +1403,9 @@ xml:
                     <td class="p-3.5 text-right font-bold text-slate-800">$${p.total.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
                     <td class="p-3.5 text-center">${getStateBadge(p.state)}</td>
                     <td class="p-3.5 text-center space-x-1">
-                        ${p.state === 'draft' ? `<button onclick="changePurchaseState('${p.id}', 'confirmed')" class="px-2 py-1 bg-amber-600 text-white text-xs rounded hover:bg-amber-700">Confirmar</button>` : ''}
-                        ${p.state === 'confirmed' ? `<button onclick="changePurchaseState('${p.id}', 'processing')" class="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700">Procesar</button>` : ''}
-                        ${p.state !== 'cancelled' && p.state !== 'processing' ? `<button onclick="changePurchaseState('${p.id}', 'cancelled')" class="px-2 py-1 bg-slate-200 text-slate-600 text-xs rounded hover:bg-slate-300">Cancelar</button>` : ''}
+                        ${p.state === 'draft' ? `<button onclick="changePurchaseState('${p.uuid}', 'confirmed')" class="px-2 py-1 bg-amber-600 text-white text-xs rounded hover:bg-amber-700">Confirmar</button>` : ''}
+                        ${p.state === 'confirmed' ? `<button onclick="changePurchaseState('${p.uuid}', 'processing')" class="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700">Procesar</button>` : ''}
+                        ${p.state !== 'cancelled' && p.state !== 'processing' ? `<button onclick="changePurchaseState('${p.uuid}', 'cancelled')" class="px-2 py-1 bg-slate-200 text-slate-600 text-xs rounded hover:bg-slate-300">Cancelar</button>` : ''}
                     </td>
                 `;
                 container.appendChild(tr);
@@ -1424,24 +1432,28 @@ xml:
             });
         }
 
-        function changePurchaseState(purchaseId, newState) {
-            const purchase = appState.purchases.find(p => p.id === purchaseId);
-            if(purchase) {
-                purchase.state = newState;
-                if (newState === 'confirmed' && !purchase.stockApplied) { purchase.stockApplied = true; applyStockMovement(purchase.items, 1); }
-                renderPurchases();
-                renderDashboard();
-            }
+        async function changePurchaseState(purchaseUuid, newState) {
+            const purchase = appState.purchases.find(p => p.uuid === purchaseUuid);
+            if (!purchase) return;
+            const { error } = await sb.from('purchases').update({ state: newState }).eq('id', purchaseUuid);
+            if (error) { alert('Error al cambiar el estado: ' + error.message); return; }
+            if (newState === 'confirmed' && purchase.state === 'draft') await applyStockMovement(purchase.items, 1);
+            if (newState === 'cancelled' && (purchase.state === 'confirmed' || purchase.state === 'processing')) await applyStockMovement(purchase.items, -1);
+            await loadAll();
+            renderPurchases();
+            renderDashboard();
         }
 
         let tempPurchaseLines = [];
 
         function openPurchaseModal() {
             if (currentUser && !can('purchases')) return;
+            if (!appState.products.length) { alert('Primero cargá al menos un producto.'); return; }
+            if (!appState.parties.some(p => p.role === 'PROVEEDOR' || p.role === 'AMBOS')) { alert('Primero cargá al menos un proveedor.'); return; }
             const partySelect = document.getElementById('purchase-party');
-            partySelect.innerHTML = appState.parties.filter(p => p.role === 'PROVEEDOR' || p.role === 'AMBOS').map(p => `<option value="${p.id}">${p.name} (${p.cuit})</option>`).join('');
+            partySelect.innerHTML = appState.parties.filter(p => p.role === 'PROVEEDOR' || p.role === 'AMBOS').map(p => `<option value="${p.uuid}">${p.name} (${p.cuit})</option>`).join('');
 
-            tempPurchaseLines = [{ productId: appState.products[0].id, qty: 1 }];
+            tempPurchaseLines = [{ productId: appState.products[0].uuid, qty: 1 }];
             renderPurchaseLines();
             document.getElementById('purchase-modal').classList.remove('hidden');
         }
@@ -1449,7 +1461,7 @@ xml:
         function closePurchaseModal() { document.getElementById('purchase-modal').classList.add('hidden'); }
 
         function addPurchaseLineItem() {
-            tempPurchaseLines.push({ productId: appState.products[0].id, qty: 1 });
+            tempPurchaseLines.push({ productId: appState.products[0].uuid, qty: 1 });
             renderPurchaseLines();
         }
 
@@ -1468,7 +1480,7 @@ xml:
                 div.innerHTML = `
                     <div class="flex items-center space-x-3">
                         <select onchange="tempPurchaseLines[${idx}].productId = this.value; calculatePurchaseTotals(); updatePurchaseLineDesc(${idx});" class="flex-1 border border-slate-300 rounded px-2 py-1 text-xs">
-                            ${appState.products.map(p => `<option value="${p.id}" ${p.id === line.productId ? 'selected' : ''}>${p.name} ($${p.basePrice.toLocaleString()})</option>`).join('')}
+                            ${appState.products.map(p => `<option value="${p.uuid}" ${p.uuid === line.productId ? 'selected' : ''}>${p.name} ($${p.basePrice.toLocaleString()})</option>`).join('')}
                         </select>
                         <input type="number" min="1" value="${line.qty}" onchange="tempPurchaseLines[${idx}].qty = parseInt(this.value) || 1; calculatePurchaseTotals();" class="w-16 border border-slate-300 rounded px-2 py-1 text-xs text-center">
                         <button type="button" onclick="removePurchaseLineItem(${idx})" class="text-red-500 hover:text-red-700 px-2"><i class="fa-solid fa-trash"></i></button>
